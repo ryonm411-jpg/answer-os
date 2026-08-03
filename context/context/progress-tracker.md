@@ -23,6 +23,7 @@ Update this file after every meaningful implementation change.
 - Created reusable `cn()` helper utility in `lib/utils.ts`
 - Configured global dark theme custom properties in `app/globals.css` and wrapped app with `TooltipProvider` in `app/layout.tsx`
 - Implemented Editor Shell (`context/features-specs/02-editor.md`): Built `EditorNavbar`, `NavigationSidebar`, and `EditorLayout` with full accessibility, backdrop overlay, escape key shortcuts, smooth slide animations, and dark design system tokens.
+- Implemented Authentication Flow (`context/features-specs/03-auth.md`): Integrated `@clerk/nextjs` and `@clerk/themes`, configured `ClerkProvider` with dark theme in `app/layout.tsx`, added route protection via Next.js 16 `proxy.ts`, built custom responsive `/sign-in` and `/sign-up` auth pages, protected `/editor` route group with `auth.protect()`, set up server-side redirect logic at `/`, and added `UserButton` to `EditorNavbar`.
 
 ## In Progress
 
@@ -30,20 +31,19 @@ Update this file after every meaningful implementation change.
 
 ## Next Up
 
-1. Install and configure Clerk for authentication
-2. Set up Prisma with Neon PostgreSQL
-3. Create the database schema from `answeros-spec.md`
-4. Implement domain onboarding flow
-5. Build the AI provider abstraction layer
-6. Implement the prompt library (curated + AI suggestions)
-7. Set up Trigger.dev background jobs for scanning
-8. Build the visibility scanner pipeline
-9. Implement the visibility score algorithm
-10. Build the dashboard UI
-11. Set up Stripe subscriptions
-12. Implement weekly email reports via Resend
-13. Add PostHog analytics and Sentry monitoring
-14. Deploy to Vercel production
+1. Set up Prisma with Neon PostgreSQL
+2. Create the database schema from `answeros-spec.md`
+3. Implement domain onboarding flow
+4. Build the AI provider abstraction layer
+5. Implement the prompt library (curated + AI suggestions)
+6. Set up Trigger.dev background jobs for scanning
+7. Build the visibility scanner pipeline
+8. Implement the visibility score algorithm
+9. Build the dashboard UI
+10. Set up Stripe subscriptions
+11. Implement weekly email reports via Resend
+12. Add PostHog analytics and Sentry monitoring
+13. Deploy to Vercel production
 
 ## Open Questions
 
@@ -70,9 +70,11 @@ Update this file after every meaningful implementation change.
 | 2026-08-02 | Cache TTL: 24 hours default, configurable per-plan post-MVP            | Fresh data at acceptable cost for MVP                      |
 | 2026-08-02 | Simple landing page + dashboard                                         | Marketing presence without full marketing stack overhead   |
 | 2026-08-02 | Dark-first design tokens in `:root` and shadcn UI primitives            | Matches technical, data-dense workspace aesthetic in `ui-context.md` |
+| 2026-08-03 | Next.js 16 `proxy.ts` for Clerk middleware                             | Follows Next.js 16 file convention for request proxying    |
 
 ## Session Notes
 
 - Specification interview completed across 4 rounds — all key decisions captured in `answeros-spec.md`
 - Context files filled with project details — ready to begin Phase 1 implementation
 - Design System & UI Foundation (`01-design-system.md`) completed: initialized shadcn/ui, installed 16 UI components, created `cn()` helper, configured CSS tokens, and verified clean build.
+- Completed Authentication implementation (`03-auth.md`): Clerk integration with dark theme, route protection via `proxy.ts`, `auth.protect()` on protected editor layout, sign-in/sign-up pages with desktop info panel, and navbar `UserButton`.

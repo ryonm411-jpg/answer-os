@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { PanelLeftOpen, PanelLeftClose } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,20 +29,22 @@ export function EditorNavbar({
       {/* Left Section */}
       <div className="flex items-center gap-3">
         <Tooltip>
-          <TooltipTrigger>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onToggleSidebar}
-              aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
-              className="h-9 w-9"
-            >
-              {isOpen ? (
-                <PanelLeftClose className="h-5 w-5" />
-              ) : (
-                <PanelLeftOpen className="h-5 w-5" />
-              )}
-            </Button>
+          <TooltipTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={onToggleSidebar}
+                aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
+                className="h-9 w-9"
+              />
+            }
+          >
+            {isOpen ? (
+              <PanelLeftClose className="h-5 w-5" />
+            ) : (
+              <PanelLeftOpen className="h-5 w-5" />
+            )}
           </TooltipTrigger>
           <TooltipContent side="bottom">
             {isOpen ? "Close navigation" : "Open navigation"}
@@ -66,9 +69,9 @@ export function EditorNavbar({
         {/* Reserved for future Search / Command Palette */}
       </div>
 
-      {/* Right Section (Reserved) */}
+      {/* Right Section */}
       <div className="flex items-center gap-2">
-        {/* Reserved for future User Menu / Notifications */}
+        <UserButton />
       </div>
     </header>
   );
