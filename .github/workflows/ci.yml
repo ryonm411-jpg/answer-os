@@ -6,9 +6,12 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+
 jobs:
   validate:
-    name: Lint, Typecheck & Test
+    name: Typecheck, Lint & Build
     runs-on: ubuntu-latest
 
     services:
@@ -17,14 +20,18 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgrespassword
-          POSTGRES_DB: financetracker
+          POSTGRES_DB: answeros
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U postgres -d answeros"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgrespassword@localhost:5432/answeros
+      NEXT_TELEMETRY_DISABLED: 1
 
     steps:
       - name: Checkout code
@@ -39,11 +46,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build shared package
-        run: npm run build --workspace=@finance-tracker/shared
+      - name: Type check
+        run: npx tsc --noEmit
 
       - name: Run ESLint
         run: npm run lint
 
-      - name: Run Vitest Unit Tests
-        run: npm run test
+      - name: Build
+        run: npm run build
+

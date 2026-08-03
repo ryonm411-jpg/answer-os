@@ -22,6 +22,7 @@ Update this file after every meaningful implementation change.
 - Installed `lucide-react`, `clsx`, and `tailwind-merge`
 - Created reusable `cn()` helper utility in `lib/utils.ts`
 - Configured global dark theme custom properties in `app/globals.css` and wrapped app with `TooltipProvider` in `app/layout.tsx`
+- Implemented Editor Shell (`context/features-specs/02-editor.md`): Built `EditorNavbar`, `NavigationSidebar`, and `EditorLayout` with full accessibility, backdrop overlay, escape key shortcuts, smooth slide animations, and dark design system tokens.
 
 ## In Progress
 
