@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useDialogs } from "@/hooks/use-dialogs";
 
 export interface NavigationSidebarProps {
   isOpen: boolean;
@@ -34,6 +35,8 @@ const navItems: NavItem[] = [
 ];
 
 export function NavigationSidebar({ isOpen, onClose }: NavigationSidebarProps) {
+  const { openDialog } = useDialogs();
+
   // Listen for Escape key to close the sidebar
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -52,6 +55,11 @@ export function NavigationSidebar({ isOpen, onClose }: NavigationSidebarProps) {
       document.body.style.overflow = "";
     };
   }, [isOpen, onClose]);
+
+  const handleAddDomain = () => {
+    onClose();
+    openDialog("add-domain");
+  };
 
   return (
     <>
@@ -126,7 +134,11 @@ export function NavigationSidebar({ isOpen, onClose }: NavigationSidebarProps) {
 
         {/* Footer */}
         <div className="mt-auto border-t border-border p-4">
-          <Button className="w-full justify-center gap-2" size="default">
+          <Button
+            className="w-full justify-center gap-2"
+            size="default"
+            onClick={handleAddDomain}
+          >
             <Plus className="h-4 w-4" />
             <span>Add Domain</span>
           </Button>
@@ -135,3 +147,4 @@ export function NavigationSidebar({ isOpen, onClose }: NavigationSidebarProps) {
     </>
   );
 }
+

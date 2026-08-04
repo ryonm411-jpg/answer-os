@@ -24,6 +24,7 @@ Update this file after every meaningful implementation change.
 - Configured global dark theme custom properties in `app/globals.css` and wrapped app with `TooltipProvider` in `app/layout.tsx`
 - Implemented Editor Shell (`context/features-specs/02-editor.md`): Built `EditorNavbar`, `NavigationSidebar`, and `EditorLayout` with full accessibility, backdrop overlay, escape key shortcuts, smooth slide animations, and dark design system tokens.
 - Implemented Authentication Flow (`context/features-specs/03-auth.md`): Integrated `@clerk/nextjs` and `@clerk/themes`, configured `ClerkProvider` with dark theme in `app/layout.tsx`, added route protection via Next.js 16 `proxy.ts`, built custom responsive `/sign-in` and `/sign-up` auth pages, protected `/editor` route group with `auth.protect()`, set up server-side redirect logic at `/`, and added `UserButton` to `EditorNavbar`.
+- Implemented Dialog System (`context/features-specs/04-dialog.md`): Created `useDialogs` React Context & state hook in `hooks/use-dialogs.ts`, built `AddDomainDialog` (with domain normalization & regex validation), `EditDomainDialog` (with pre-filled input & auto-focus), `RemoveDomainDialog` (with destructive styling confirmation), `RunScanDialog` (with confirmation actions), `DialogContainer`, wrapped `EditorLayout` in `DialogProvider`, and wired triggers in `NavigationSidebar` and `EditorPage`.
 
 ## In Progress
 
@@ -71,6 +72,7 @@ Update this file after every meaningful implementation change.
 | 2026-08-02 | Simple landing page + dashboard                                         | Marketing presence without full marketing stack overhead   |
 | 2026-08-02 | Dark-first design tokens in `:root` and shadcn UI primitives            | Matches technical, data-dense workspace aesthetic in `ui-context.md` |
 | 2026-08-03 | Next.js 16 `proxy.ts` for Clerk middleware                             | Follows Next.js 16 file convention for request proxying    |
+| 2026-08-03 | Global `DialogProvider` Context for Dialog System                       | Allows any component in the editor tree to trigger dialogs |
 
 ## Session Notes
 
@@ -78,3 +80,4 @@ Update this file after every meaningful implementation change.
 - Context files filled with project details — ready to begin Phase 1 implementation
 - Design System & UI Foundation (`01-design-system.md`) completed: initialized shadcn/ui, installed 16 UI components, created `cn()` helper, configured CSS tokens, and verified clean build.
 - Completed Authentication implementation (`03-auth.md`): Clerk integration with dark theme, route protection via `proxy.ts`, `auth.protect()` on protected editor layout, sign-in/sign-up pages with desktop info panel, and navbar `UserButton`.
+- Completed Dialog System implementation (`04-dialog.md`): Built `useDialogs` hook, 4 core dialog components (`AddDomainDialog`, `EditDomainDialog`, `RemoveDomainDialog`, `RunScanDialog`), `DialogContainer`, wrapped layout with `DialogProvider`, and verified build.
