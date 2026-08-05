@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ScanStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum AIProvider {
+  OPENAI
+  ANTHROPIC
+  GEMINI
+  PERPLEXITY
+}
+
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+}
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  name      String?
+  company   Company?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Company {
+  id              String           @id @default(cuid())
+  userId          String           @unique
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  domain          String           @unique
+  industry        String?
+  competitors     Competitor[]
+  scans           Scan[]
+  recommendations Recommendation[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Scan {
+  id          String       @id @default(cuid())
+  companyId   String
+  company     Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  status      ScanStatus   @default(PENDING)
+  startedAt   DateTime?
+  completedAt DateTime?
+  results     ScanResult[]
+  createdAt   DateTime     @default(now())
+
+  @@index([companyId])
+}
+
+model ScanResult {
+  id                   String     @id @default(cuid())
+  scanId               String
+  scan                 Scan       @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  promptId             String
+  prompt               Prompt     @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  provider             AIProvider
+  mentioned            Boolean
+  position             Int?
+  sentiment            Sentiment?
+  reasoning            String?
+  rawResponse          String?
+  competitorsMentioned Json?
+  createdAt            DateTime   @default(now())
+
+  @@index([scanId])
+  @@index([promptId])
+}
+
+model Prompt {
+  id           String       @id @default(cuid())
+  text         String
+  category     String
+  searchVolume Int?
+  results      ScanResult[]
+  createdAt    DateTime     @default(now())
+}
+
+model Competitor {
+  id               String   @id @default(cuid())
+  companyId        String
+  company          Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name             String
+  domain           String
+  isAutoDiscovered Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([companyId])
+}
+
+model Recommendation {
+  id              String   @id @default(cuid())
+  companyId       String
+  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title           String
+  description     String
+  priority        Int
+  estimatedImpact Int?
+  category        String
+  completed       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  @@index([companyId])
+}
