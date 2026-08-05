@@ -26,6 +26,7 @@ Update this file after every meaningful implementation change.
 - Implemented Authentication Flow (`context/features-specs/03-auth.md`): Integrated `@clerk/nextjs` and `@clerk/themes`, configured `ClerkProvider` with dark theme in `app/layout.tsx`, added route protection via Next.js 16 `proxy.ts`, built custom responsive `/sign-in` and `/sign-up` auth pages, protected `/editor` route group with `auth.protect()`, set up server-side redirect logic at `/`, and added `UserButton` to `EditorNavbar`.
 - Implemented Dialog System (`context/features-specs/04-dialog.md`): Created `useDialogs` React Context & state hook in `hooks/use-dialogs.ts`, built `AddDomainDialog` (with domain normalization & regex validation), `EditDomainDialog` (with pre-filled input & auto-focus), `RemoveDomainDialog` (with destructive styling confirmation), `RunScanDialog` (with confirmation actions), `DialogContainer`, wrapped `EditorLayout` in `DialogProvider`, and wired triggers in `NavigationSidebar` and `EditorPage`.
 - Implemented Prisma & Neon PostgreSQL Data Layer (`context/features-specs/05-prisma.md`): Configured `prisma/schema.prisma` with all 7 core models (`User`, `Company`, `Scan`, `ScanResult`, `Prompt`, `Competitor`, `Recommendation`) and 3 enums (`ScanStatus`, `AIProvider`, `Sentiment`), set up `prisma.config.ts` with `DATABASE_URL` (pooled) and `DIRECT_URL` (direct), built cached Prisma client singleton with `@prisma/adapter-neon` in `lib/db/prisma.ts`, generated initial SQL migration in `prisma/migrations/20260804000000_init/migration.sql`, and verified client generation with `npx prisma generate`.
+- Implemented Domain REST API (`context/features-specs/06-domain-apis.md`): Created domain normalization & validation utilities in `lib/utils/domain.ts` and REST endpoint handlers in `app/api/domain/route.ts` supporting `GET`, `POST`, `PATCH`, and `DELETE` methods with Clerk auth protection, ownership validation, domain uniqueness checks, duplicate domain rejection, and relation cascade deletes.
 
 ## In Progress
 
@@ -33,17 +34,16 @@ Update this file after every meaningful implementation change.
 
 ## Next Up
 
-1. Implement domain onboarding flow
-2. Build the AI provider abstraction layer
-3. Implement the prompt library (curated + AI suggestions)
-4. Set up Trigger.dev background jobs for scanning
-5. Build the visibility scanner pipeline
-6. Implement the visibility score algorithm
-7. Build the dashboard UI
-8. Set up Stripe subscriptions
-9. Implement weekly email reports via Resend
-10. Add PostHog analytics and Sentry monitoring
-11. Deploy to Vercel production
+1. Build the AI provider abstraction layer
+2. Implement the prompt library (curated + AI suggestions)
+3. Set up Trigger.dev background jobs for scanning
+4. Build the visibility scanner pipeline
+5. Implement the visibility score algorithm
+6. Build the dashboard UI
+7. Set up Stripe subscriptions
+8. Implement weekly email reports via Resend
+9. Add PostHog analytics and Sentry monitoring
+10. Deploy to Vercel production
 
 ## Open Questions
 
@@ -73,6 +73,7 @@ Update this file after every meaningful implementation change.
 | 2026-08-03 | Next.js 16 `proxy.ts` for Clerk middleware                             | Follows Next.js 16 file convention for request proxying    |
 | 2026-08-03 | Global `DialogProvider` Context for Dialog System                       | Allows any component in the editor tree to trigger dialogs |
 | 2026-08-04 | Prisma v7 + Neon serverless driver adapter in `lib/db/prisma.ts`       | Enables serverless database connection pooling & WebSocket support |
+| 2026-08-05 | REST API in `app/api/domain/route.ts` with Clerk auth & standard response envelope | Enforces single-company constraint, domain normalization, and uniform `{ data }` / `{ error }` HTTP responses |
 
 ## Session Notes
 
@@ -82,3 +83,4 @@ Update this file after every meaningful implementation change.
 - Completed Authentication implementation (`03-auth.md`): Clerk integration with dark theme, route protection via `proxy.ts`, `auth.protect()` on protected editor layout, sign-in/sign-up pages with desktop info panel, and navbar `UserButton`.
 - Completed Dialog System implementation (`04-dialog.md`): Built `useDialogs` hook, 4 core dialog components (`AddDomainDialog`, `EditDomainDialog`, `RemoveDomainDialog`, `RunScanDialog`), `DialogContainer`, wrapped layout with `DialogProvider`, and verified build.
 - Completed Prisma & Neon PostgreSQL Data Layer (`05-prisma.md`): Defined 7 core models, 3 enums, custom client output path (`generated/prisma`), `@prisma/adapter-neon` singleton in `lib/db/prisma.ts`, `DATABASE_URL`/`DIRECT_URL` configuration, and initial SQL migration.
+- Completed Domain REST API (`06-domain-apis.md`): Built domain normalization utility in `lib/utils/domain.ts` and `GET`, `POST`, `PATCH`, `DELETE` endpoint handlers in `app/api/domain/route.ts` with Clerk auth checks, input validation, domain uniqueness, and standardized JSON envelopes.
