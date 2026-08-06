@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Pencil } from "lucide-react";
 import {
   Dialog,
@@ -14,11 +15,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  useDialogs,
-  normalizeDomain,
-  validateDomain,
-} from "@/hooks/use-dialogs";
+import { useDialogs } from "@/hooks/use-dialogs";
+import { normalizeDomain, validateDomain } from "@/lib/utils/domain";
+import { updateCompanyDomain } from "@/lib/api/domain";
 
 export function EditDomainDialog() {
   const {
@@ -30,6 +29,8 @@ export function EditDomainDialog() {
     setFormError,
     setLoading,
   } = useDialogs();
+
+  const router = useRouter();
 
   const inputRef = React.useRef<HTMLInputElement>(null);
   const isOpen = activeDialog === "edit-domain";
@@ -45,7 +46,7 @@ export function EditDomainDialog() {
     }
   }, [isOpen]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const normalized = normalizeDomain(formState.domain);
@@ -56,12 +57,20 @@ export function EditDomainDialog() {
       return;
     }
 
-    // Mock submission — no API call
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await updateCompanyDomain(normalized);
+      router.refresh();
       closeDialog();
-    }, 500);
+    } catch (err) {
+      setFormError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

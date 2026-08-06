@@ -2,10 +2,47 @@ import { NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/db/prisma";
 import { normalizeDomain, isValidDomain } from "@/lib/utils/domain";
+import {
+  ensureUser,
+  getCompanyByClerkId,
+  getCompanyByUserId,
+  createCompany,
+  updateCompanyDomain,
+  deleteCompany,
+} from "@/lib/db/companies";
+import type { Company } from "@/generated/prisma";
+
+interface PrismaUniqueConstraintError {
+  code: string;
+  meta?: { target?: string[] };
+}
+
+/** Prisma throws P2002 when a @unique field is violated (race protection). */
+function isUniqueConstraintError(error: unknown): error is PrismaUniqueConstraintError {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { code?: unknown }).code === "P2002"
+  );
+}
+
+/** Shape the company for API responses (adds the UI onboarding status). */
+function companyData(company: Company) {
+  return {
+    id: company.id,
+    name: company.name,
+    domain: company.domain,
+    industry: company.industry,
+    onboardingStatus: "COMPLETED" as const,
+    createdAt: company.createdAt,
+    updatedAt: company.updatedAt,
+  };
+}
 
 /**
  * GET /api/domain
- * Returns the authenticated user's company information and onboarding status.
+ * Returns the authenticated user's company, or `null` when they have no
+ * company yet ("no company yet" is a valid onboarding state, not a 404).
  */
 export async function GET() {
   const { userId: clerkId } = await auth();
@@ -17,38 +54,16 @@ export async function GET() {
     );
   }
 
-  const user = await prisma.user.findUnique({
-    where: { clerkId },
-    include: { company: true },
-  });
+  const company = await getCompanyByClerkId(clerkId);
 
-  if (!user || !user.company) {
-    return NextResponse.json(
-      { error: { message: "Company not found" } },
-      { status: 404 }
-    );
-  }
-
-  return NextResponse.json(
-    {
-      data: {
-        id: user.company.id,
-        name: user.company.name,
-        domain: user.company.domain,
-        industry: user.company.industry,
-        onboardingStatus: "COMPLETED",
-        createdAt: user.company.createdAt,
-        updatedAt: user.company.updatedAt,
-      },
-    },
-    { status: 200 }
-  );
+  return NextResponse.json({ data: company ? companyData(company) : null });
 }
 
 /**
  * POST /api/domain
  * Creates the authenticated user's company.
- * Request body: { name: string, domain: string, industry?: string }
+ * Request body: { domain: string, industry?: string }
+ * `name` defaults to the normalized domain (no separate name field in MVP).
  */
 export async function POST(req: Request) {
   const { userId: clerkId } = await auth();
@@ -60,7 +75,7 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { name?: unknown; domain?: unknown; industry?: unknown };
+  let body: { domain?: unknown; industry?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -70,15 +85,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { name, domain, industry } = body || {};
-
-  const trimmedName = typeof name === "string" ? name.trim() : "";
-  if (!trimmedName) {
-    return NextResponse.json(
-      { error: { message: "Company name is required" } },
-      { status: 400 }
-    );
-  }
+  const { domain, industry } = body ?? {};
 
   const normalizedDomain =
     typeof domain === "string" ? normalizeDomain(domain) : "";
@@ -89,7 +96,7 @@ export async function POST(req: Request) {
     );
   }
 
-  // Ensure Clerk user is synced to DB
+  // Ensure the Clerk user is synced to the database.
   const clerkUser = await currentUser();
   const email =
     clerkUser?.emailAddresses[0]?.emailAddress ?? `${clerkId}@example.com`;
@@ -97,66 +104,63 @@ export async function POST(req: Request) {
     ? `${clerkUser.firstName ?? ""} ${clerkUser.lastName ?? ""}`.trim() || null
     : null;
 
-  const dbUser = await prisma.user.upsert({
-    where: { clerkId },
-    update: {},
-    create: {
-      clerkId,
-      email,
-      name: fullName,
-    },
-    include: { company: true },
-  });
+  const dbUser = await ensureUser(clerkId, email, fullName);
 
-  // Each user may create only one company in MVP
-  if (dbUser.company) {
+  // Each user may create only one company in the MVP.
+  const existingCompany = await getCompanyByUserId(dbUser.id);
+  if (existingCompany) {
     return NextResponse.json(
       { error: { message: "User already has a company" } },
       { status: 409 }
     );
   }
 
-  // Reject duplicate domains globally
-  const existingDomain = await prisma.company.findUnique({
+  // Reject duplicate domains globally.
+  const duplicateDomain = await prisma.company.findUnique({
     where: { domain: normalizedDomain },
   });
-
-  if (existingDomain) {
+  if (duplicateDomain) {
     return NextResponse.json(
       { error: { message: "Domain is already registered" } },
       { status: 409 }
     );
   }
 
-  // Create company
-  const company = await prisma.company.create({
-    data: {
-      userId: dbUser.id,
-      name: trimmedName,
-      domain: normalizedDomain,
-      industry: typeof industry === "string" ? industry.trim() || null : null,
-    },
-  });
+  let company: Company;
+  try {
+    company = await createCompany(
+      dbUser.id,
+      normalizedDomain,
+      typeof industry === "string" ? industry.trim() || undefined : undefined
+    );
+  } catch (error) {
+    // Two near-simultaneous POSTs can both pass the pre-checks above and then
+    // trip a unique constraint on insert — surface those as clean 409s.
+    if (isUniqueConstraintError(error)) {
+      const target = error.meta?.target;
+      return NextResponse.json(
+        {
+          error: {
+            message: target?.includes("userId")
+              ? "User already has a company"
+              : "Domain is already registered",
+          },
+        },
+        { status: 409 }
+      );
+    }
+    throw error;
+  }
 
-  return NextResponse.json(
-    {
-      data: {
-        id: company.id,
-        name: company.name,
-        domain: company.domain,
-        industry: company.industry,
-        onboardingStatus: "COMPLETED",
-        createdAt: company.createdAt,
-        updatedAt: company.updatedAt,
-      },
-    },
-    { status: 201 }
-  );
+  return NextResponse.json({ data: companyData(company) }, { status: 201 });
 }
 
 /**
  * PATCH /api/domain
- * Updates company information (name, domain, industry) for the authenticated user.
+ * Updates the authenticated user's tracked domain.
+ * Request body: { domain: string }
+ * Note: optional `name` / `industry` keys are tolerated (accepted and ignored)
+ * in the MVP — the Edit Domain dialog only edits the domain.
  */
 export async function PATCH(req: Request) {
   const { userId: clerkId } = await auth();
@@ -168,7 +172,7 @@ export async function PATCH(req: Request) {
     );
   }
 
-  let body: { name?: unknown; domain?: unknown; industry?: unknown };
+  let body: { domain?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -178,82 +182,41 @@ export async function PATCH(req: Request) {
     );
   }
 
-  const { name, domain, industry } = body || {};
+  const { domain } = body ?? {};
 
-  const user = await prisma.user.findUnique({
-    where: { clerkId },
-    include: { company: true },
-  });
+  const normalizedDomain =
+    typeof domain === "string" ? normalizeDomain(domain) : "";
+  if (!normalizedDomain || !isValidDomain(normalizedDomain)) {
+    return NextResponse.json(
+      { error: { message: "Invalid domain format" } },
+      { status: 400 }
+    );
+  }
 
-  if (!user || !user.company) {
+  const company = await getCompanyByClerkId(clerkId);
+  if (!company) {
     return NextResponse.json(
       { error: { message: "Company not found" } },
       { status: 404 }
     );
   }
 
-  const updateData: { name?: string; domain?: string; industry?: string | null } =
-    {};
-
-  if (name !== undefined) {
-    const trimmedName = typeof name === "string" ? name.trim() : "";
-    if (!trimmedName) {
+  // Reject duplicate domains globally (unless it's the user's own domain).
+  if (normalizedDomain !== company.domain) {
+    const duplicateDomain = await prisma.company.findUnique({
+      where: { domain: normalizedDomain },
+    });
+    if (duplicateDomain) {
       return NextResponse.json(
-        { error: { message: "Company name cannot be empty" } },
-        { status: 400 }
+        { error: { message: "Domain is already registered" } },
+        { status: 409 }
       );
     }
-    updateData.name = trimmedName;
   }
 
-  if (domain !== undefined) {
-    const normalizedDomain =
-      typeof domain === "string" ? normalizeDomain(domain) : "";
-    if (!normalizedDomain || !isValidDomain(normalizedDomain)) {
-      return NextResponse.json(
-        { error: { message: "Invalid domain format" } },
-        { status: 400 }
-      );
-    }
+  const updatedCompany = await updateCompanyDomain(company.id, normalizedDomain);
 
-    if (normalizedDomain !== user.company.domain) {
-      const duplicateDomain = await prisma.company.findUnique({
-        where: { domain: normalizedDomain },
-      });
-      if (duplicateDomain) {
-        return NextResponse.json(
-          { error: { message: "Domain is already registered" } },
-          { status: 409 }
-        );
-      }
-      updateData.domain = normalizedDomain;
-    }
-  }
-
-  if (industry !== undefined) {
-    updateData.industry =
-      typeof industry === "string" ? industry.trim() || null : null;
-  }
-
-  const updatedCompany = await prisma.company.update({
-    where: { id: user.company.id },
-    data: updateData,
-  });
-
-  return NextResponse.json(
-    {
-      data: {
-        id: updatedCompany.id,
-        name: updatedCompany.name,
-        domain: updatedCompany.domain,
-        industry: updatedCompany.industry,
-        onboardingStatus: "COMPLETED",
-        createdAt: updatedCompany.createdAt,
-        updatedAt: updatedCompany.updatedAt,
-      },
-    },
-    { status: 200 }
-  );
+  return NextResponse.json({ data: companyData(updatedCompany) });
 }
 
 /**
@@ -271,26 +234,17 @@ export async function DELETE() {
     );
   }
 
-  const user = await prisma.user.findUnique({
-    where: { clerkId },
-    include: { company: true },
-  });
-
-  if (!user || !user.company) {
+  const company = await getCompanyByClerkId(clerkId);
+  if (!company) {
     return NextResponse.json(
       { error: { message: "Company not found" } },
       { status: 404 }
     );
   }
 
-  await prisma.company.delete({
-    where: { id: user.company.id },
-  });
+  await deleteCompany(company.id);
 
-  return NextResponse.json(
-    {
-      data: { message: "Company deleted successfully" },
-    },
-    { status: 200 }
-  );
+  return NextResponse.json({
+    data: { message: "Company deleted successfully" },
+  });
 }

@@ -119,37 +119,3 @@ export function useDialogs() {
   return context;
 }
 
-// --- Domain Validation Utilities ---
-
-/**
- * Normalizes a raw domain input:
- * - trims whitespace
- * - strips protocol (http:// or https://)
- * - strips www. prefix
- * - strips trailing slash
- */
-export function normalizeDomain(raw: string): string {
-  let domain = raw.trim().toLowerCase();
-  domain = domain.replace(/^https?:\/\//, "");
-  domain = domain.replace(/^www\./, "");
-  domain = domain.replace(/\/+$/, "");
-  return domain;
-}
-
-/**
- * Validates a normalized domain string.
- * Returns an error message string, or empty string if valid.
- */
-export function validateDomain(domain: string): string {
-  if (!domain) {
-    return "Domain is required.";
-  }
-
-  // Basic domain format: at least one label, a dot, and a TLD of 2+ chars
-  const domainRegex = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/;
-  if (!domainRegex.test(domain)) {
-    return "Enter a valid domain (e.g. company.com).";
-  }
-
-  return "";
-}

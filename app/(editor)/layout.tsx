@@ -1,12 +1,14 @@
 import { auth } from "@clerk/nextjs/server";
 import { EditorLayout } from "@/components/editor/editor-layout";
+import { getCompanyByClerkId } from "@/lib/db/companies";
 
 export default async function ProtectedEditorLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  await auth.protect();
+  const { userId: clerkId } = await auth.protect();
+  const company = clerkId ? await getCompanyByClerkId(clerkId) : null;
 
-  return <EditorLayout domainName="shopify.com">{children}</EditorLayout>;
+  return <EditorLayout domainName={company?.domain}>{children}</EditorLayout>;
 }

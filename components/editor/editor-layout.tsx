@@ -11,10 +11,7 @@ export interface EditorLayoutProps {
   domainName?: string;
 }
 
-export function EditorLayout({
-  children,
-  domainName = "shopify.com",
-}: EditorLayoutProps) {
+export function EditorLayout({ children, domainName }: EditorLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
   const toggleSidebar = React.useCallback(() => {

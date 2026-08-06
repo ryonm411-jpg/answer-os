@@ -39,3 +39,20 @@ export function isValidDomain(domain: string): boolean {
 
   return domainRegex.test(domain);
 }
+
+/**
+ * Validates a normalized domain string for user-facing error messages.
+ * Returns an error message string, or an empty string if the domain is valid.
+ * Shared by the dialogs and the API so client and server validate identically.
+ */
+export function validateDomain(domain: string): string {
+  if (!domain) {
+    return "Domain is required.";
+  }
+
+  if (!isValidDomain(domain)) {
+    return "Enter a valid domain (e.g. company.com).";
+  }
+
+  return "";
+}

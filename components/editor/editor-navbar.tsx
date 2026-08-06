@@ -21,7 +21,7 @@ export interface EditorNavbarProps {
 export function EditorNavbar({
   isOpen,
   onToggleSidebar,
-  domainName = "shopify.com",
+  domainName,
   scanStatus = "Active",
 }: EditorNavbarProps) {
   return (
@@ -51,17 +51,20 @@ export function EditorNavbar({
           </TooltipContent>
         </Tooltip>
 
-        <div className="flex items-center gap-2">
-          <span className="font-semibold text-sm tracking-tight text-foreground">
-            {domainName}
-          </span>
-          <Badge
-            variant="outline"
-            className="hidden sm:inline-flex text-[11px] font-medium border-emerald-500/30 bg-emerald-500/10 text-emerald-400 py-0.5 px-2"
-          >
-            {scanStatus}
-          </Badge>
-        </div>
+        {domainName && (
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-sm tracking-tight text-foreground">
+              {domainName}
+            </span>
+            {/* Scan-status badge stays a placeholder until the scanning feature */}
+            <Badge
+              variant="outline"
+              className="hidden sm:inline-flex text-[11px] font-medium border-emerald-500/30 bg-emerald-500/10 text-emerald-400 py-0.5 px-2"
+            >
+              {scanStatus}
+            </Badge>
+          </div>
+        )}
       </div>
 
       {/* Center Section (Reserved) */}

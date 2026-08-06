@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import {
   Dialog,
@@ -12,21 +13,39 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/hooks/use-dialogs";
+import { removeCompany } from "@/lib/api/domain";
 
 export function RemoveDomainDialog() {
-  const { activeDialog, dialogData, isLoading, closeDialog, setLoading } =
-    useDialogs();
+  const {
+    activeDialog,
+    dialogData,
+    formState,
+    isLoading,
+    closeDialog,
+    setFormError,
+    setLoading,
+  } = useDialogs();
+
+  const router = useRouter();
 
   const isOpen = activeDialog === "remove-domain";
   const domainName = dialogData.domain ?? "this domain";
 
-  const handleConfirm = () => {
-    // Mock removal — no API call
+  const handleConfirm = async () => {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await removeCompany();
+      router.refresh();
       closeDialog();
-    }, 500);
+    } catch (err) {
+      setFormError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -42,6 +61,15 @@ export function RemoveDomainDialog() {
             scan history will be permanently deleted.
           </DialogDescription>
         </DialogHeader>
+
+        {formState.error && (
+          <p
+            className="text-sm text-destructive"
+            role="alert"
+          >
+            {formState.error}
+          </p>
+        )}
 
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>
