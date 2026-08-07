@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- Implement the Wire Dashboard feature (`context/features-specs/07-wire-dashboard.md`): connect the dashboard, navigation, and dialogs to the real company data layer and API
+- Implement the prompt library (curated + AI suggestions)
 
 ## Completed
 
@@ -26,6 +26,8 @@ Update this file after every meaningful implementation change.
 - Implemented Prisma & Neon PostgreSQL Data Layer (`context/features-specs/05-prisma.md`): Configured `prisma/schema.prisma` with all 7 core models (`User`, `Company`, `Scan`, `ScanResult`, `Prompt`, `Competitor`, `Recommendation`) and 3 enums (`ScanStatus`, `AIProvider`, `Sentiment`), set up `prisma.config.ts` with `DATABASE_URL` (pooled) and `DIRECT_URL` (direct), built cached Prisma client singleton with `@prisma/adapter-neon` in `lib/db/prisma.ts`, generated initial SQL migration in `prisma/migrations/20260804000000_init/migration.sql`, and verified client generation with `npx prisma generate`.
 - Implemented Domain REST API (`context/features-specs/06-domain-apis.md`): Created domain normalization & validation utilities in `lib/utils/domain.ts` and REST endpoint handlers in `app/api/domain/route.ts` supporting `GET`, `POST`, `PATCH`, and `DELETE` methods with Clerk auth protection, ownership validation, domain uniqueness checks, duplicate domain rejection, and relation cascade deletes. Corrected spec drift (2026-08-05): `POST` body narrowed to `{ name, domain }` (removed `industry`), `PATCH` allowed fields narrowed to `name` and `domain` only — aligning with the updated `06-domain-apis.md` spec.
 - Implemented Wire Dashboard (`context/features-specs/07-wire-dashboard.md`): Created `lib/db/companies.ts` (6 thin Prisma helpers: `getCompanyByClerkId`, `ensureUser`, `getCompanyByUserId`, `createCompany`, `updateCompanyDomain`, `deleteCompany`), refactored `app/api/domain/route.ts` to delegate to them (`POST` now accepts `{ domain }` with `name` defaulting to the normalized domain, `GET` returns `200 { data: null }` when no company), created client fetch helpers in `lib/api/domain.ts`, wired Add/Edit/Remove domain dialogs to the real API with `router.refresh()` and inline errors, consolidated `validateDomain` into shared `lib/utils/domain.ts` (removed local copies from `hooks/use-dialogs.tsx`), converted the dashboard page into a server component with empty/company states (`DashboardContent`), and removed the hardcoded `shopify.com` from the editor layout, navbar, and page.
+- Implemented Domain Onboarding (`context/features-specs/08-domain-onboarding.md`): Created `app/onboarding/layout.tsx` (minimal standalone layout with AnswerOS brand mark, outside the editor shell), `app/onboarding/page.tsx` (server component — `auth.protect()` + `redirect("/editor")` when company exists), `components/onboarding/onboarding-form.tsx` (client form — normalize → validate → `createCompany` → `router.push("/editor")`), and wired `afterSignUpUrl="/onboarding"` on the `<SignUp />` component. Uses shared `lib/utils/domain.ts` validation and `lib/api/domain.ts` fetch helper — no local copies.
+- Implemented AI Provider Abstraction (`context/features-specs/09-ai-provider-abstraction.md`): Built `lib/providers/` abstraction layer over OpenAI, Anthropic, Gemini, and Perplexity using the Vercel AI SDK, plus a deterministic `MockProvider` and typed `AIProviderError` taxonomy with `retryable` flags. Added lazy provider registry (`getProvider` / `getAvailableProviders`), `TO_PRISMA_PROVIDER` mapping, and co-located Vitest unit tests (`npm test` script).
 
 ## In Progress
 
@@ -33,16 +35,16 @@ Update this file after every meaningful implementation change.
 
 ## Next Up
 
-1. Build the AI provider abstraction layer
-2. Implement the prompt library (curated + AI suggestions)
-3. Set up Trigger.dev background jobs for scanning
-4. Build the visibility scanner pipeline
-5. Implement the visibility score algorithm
-6. Build the dashboard UI
-7. Set up Stripe subscriptions
-8. Implement weekly email reports via Resend
-9. Add PostHog analytics and Sentry monitoring
-10. Deploy to Vercel production
+1. Implement the prompt library (curated + AI suggestions)
+2. Set up Trigger.dev background jobs for scanning
+3. Build the visibility scanner pipeline
+4. Implement the visibility score algorithm
+5. Build the dashboard UI
+6. Set up Stripe subscriptions
+7. Implement weekly email reports via Resend
+9. Implement weekly email reports via Resend
+10. Add PostHog analytics and Sentry monitoring
+11. Deploy to Vercel production
 
 ## Open Questions
 
@@ -52,6 +54,8 @@ Update this file after every meaningful implementation change.
 - Whether to support non-English prompts and scans in MVP
 - Logo and brand identity (colors, fonts beyond Geist)
 - PostHog vs alternative analytics (will revisit after initial setup)
+- Exact default model IDs per provider (`DEFAULT_MODELS` in `lib/providers/config.ts`) — verify current identifiers at implementation time (spec assumes `gpt-4o`, `claude-3-5-sonnet-latest`, `gemini-2.5-flash`, `sonar`)
+- Default timeout value for provider calls (spec assumes 30s)
 
 ## Architecture Decisions
 
@@ -86,3 +90,8 @@ Update this file after every meaningful implementation change.
 - Spec maintenance (2026-08-05): Rewrote `07-wire-dashboard.md` (dashboard as a server component, `lib/db/companies.ts` helpers, dialog wiring) and corrected `06-domain-apis.md` drift — route path `/api/domain`, `{ error: { message } }` response envelope, and required `name` on `POST` — deferring the remaining dashboard/dialog wiring to `07-wire-dashboard.md`.
 - Domain API spec alignment (2026-08-05): Applied corrections from the updated `06-domain-apis.md` to `app/api/domain/route.ts` — removed `industry` from `POST` request body and `PATCH` allowed fields, updated PATCH JSDoc. Build verified clean (`npm run build` passes with no errors).
 - Completed Wire Dashboard implementation (2026-08-05): Implemented `07-wire-dashboard.md` end-to-end — `lib/db/companies.ts` DB helpers, thin `app/api/domain/route.ts` (POST `{ domain }`, GET `200 null`), `lib/api/domain.ts` fetch helpers, real API wiring in the Add/Edit/Remove dialogs (loading + inline errors + `router.refresh()`), consolidated shared domain validation in `lib/utils/domain.ts`, server-component dashboard with empty/company states, and real domain in the navbar (hardcoded `shopify.com` removed).
+- Wrote Domain Onboarding spec (2026-08-05): Created `08-domain-onboarding.md` — dedicated `/onboarding` route (domain-only scope per product decision), standalone layout outside `(editor)`, `auth.protect()` + `redirect("/editor")` access control, single-step `OnboardingForm` reusing shared validation and `POST /api/domain`, `afterSignUpUrl="/onboarding"` wiring, explicit out-of-scope list (competitors, verification, prompt generation), and unchanged dashboard/dialog entry points.
+- Wrote AI Provider Abstraction spec (2026-08-06): Created `09-ai-provider-abstraction.md` — Vercel AI SDK as the shared client (user decision), all 4 providers + `MockProvider`, `ask()` as plain-text completion (structured parsing deferred to the scanner pipeline spec), Vitest unit tests included (user decision), typed `AIProviderError` classification, lazy registry, and documented env vars.
+- Completed Domain Onboarding implementation (2026-08-05): Created `app/onboarding/layout.tsx` (standalone brand layout), `app/onboarding/page.tsx` (server component with `auth.protect()` + company redirect guard), `components/onboarding/onboarding-form.tsx` (client form using shared validation + `createCompany` helper + `router.push`), and updated `app/(auth)/sign-up/[[...sign-up]]/page.tsx` with `afterSignUpUrl="/onboarding"`. Build verified clean.
+- Completed AI Provider Abstraction implementation (2026-08-06): Created `lib/providers/` (`types.ts`, `errors.ts`, `config.ts`, `openai.ts`, `anthropic.ts`, `gemini.ts`, `perplexity.ts`, `mock.ts`, `registry.ts`, `index.ts`) wrapping Vercel AI SDK behind standard `AIProvider.ask()` interface with `MockProvider`, lazy singletons, typed error taxonomy, and co-located Vitest unit tests (`config.test.ts`, `mock.test.ts`, `registry.test.ts`). Build and tests verified clean.
+
