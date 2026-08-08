@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- Implement the prompt library (curated + AI suggestions)
+- Set up Trigger.dev background jobs for scanning
 
 ## Completed
 
@@ -28,6 +28,7 @@ Update this file after every meaningful implementation change.
 - Implemented Wire Dashboard (`context/features-specs/07-wire-dashboard.md`): Created `lib/db/companies.ts` (6 thin Prisma helpers: `getCompanyByClerkId`, `ensureUser`, `getCompanyByUserId`, `createCompany`, `updateCompanyDomain`, `deleteCompany`), refactored `app/api/domain/route.ts` to delegate to them (`POST` now accepts `{ domain }` with `name` defaulting to the normalized domain, `GET` returns `200 { data: null }` when no company), created client fetch helpers in `lib/api/domain.ts`, wired Add/Edit/Remove domain dialogs to the real API with `router.refresh()` and inline errors, consolidated `validateDomain` into shared `lib/utils/domain.ts` (removed local copies from `hooks/use-dialogs.tsx`), converted the dashboard page into a server component with empty/company states (`DashboardContent`), and removed the hardcoded `shopify.com` from the editor layout, navbar, and page.
 - Implemented Domain Onboarding (`context/features-specs/08-domain-onboarding.md`): Created `app/onboarding/layout.tsx` (minimal standalone layout with AnswerOS brand mark, outside the editor shell), `app/onboarding/page.tsx` (server component — `auth.protect()` + `redirect("/editor")` when company exists), `components/onboarding/onboarding-form.tsx` (client form — normalize → validate → `createCompany` → `router.push("/editor")`), and wired `afterSignUpUrl="/onboarding"` on the `<SignUp />` component. Uses shared `lib/utils/domain.ts` validation and `lib/api/domain.ts` fetch helper — no local copies.
 - Implemented AI Provider Abstraction (`context/features-specs/09-ai-provider-abstraction.md`): Built `lib/providers/` abstraction layer over OpenAI, Anthropic, Gemini, and Perplexity using the Vercel AI SDK, plus a deterministic `MockProvider` and typed `AIProviderError` taxonomy with `retryable` flags. Added lazy provider registry (`getProvider` / `getAvailableProviders`), `TO_PRISMA_PROVIDER` mapping, and co-located Vitest unit tests (`npm test` script).
+- Implemented Prompt Library (`context/features-specs/10-prompt-library.md`): Extended `Prompt` model with nullable `companyId` and `PromptSource` enum (`20260808020508_add_prompt_source_and_company`), built curated prompt library (`lib/prompts/curated.ts`) with 100 buyer question prompts across 11 categories, configured `prisma/seed.ts` with `tsx` runner for idempotent seeding, created thin Prisma helpers in `lib/db/prompts.ts`, implemented AI prompt suggestion generator (`lib/prompts/generator.ts`) via `lib/providers/` with JSON parsing, deduplication, curated catalog filtering, and `PromptGenerationError`, exposed `GET /api/prompts` and `POST /api/prompts/generate` REST endpoints, wired non-blocking onboarding kickoff, and added Vitest unit test suites.
 
 ## In Progress
 
@@ -35,13 +36,12 @@ Update this file after every meaningful implementation change.
 
 ## Next Up
 
-1. Implement the prompt library (curated + AI suggestions)
-2. Set up Trigger.dev background jobs for scanning
-3. Build the visibility scanner pipeline
-4. Implement the visibility score algorithm
-5. Build the dashboard UI
-6. Set up Stripe subscriptions
-7. Implement weekly email reports via Resend
+1. Set up Trigger.dev background jobs for scanning
+2. Build the visibility scanner pipeline
+3. Implement the visibility score algorithm
+4. Build the dashboard UI
+5. Set up Stripe subscriptions
+6. Implement weekly email reports via Resend
 9. Implement weekly email reports via Resend
 10. Add PostHog analytics and Sentry monitoring
 11. Deploy to Vercel production
@@ -94,4 +94,5 @@ Update this file after every meaningful implementation change.
 - Wrote AI Provider Abstraction spec (2026-08-06): Created `09-ai-provider-abstraction.md` — Vercel AI SDK as the shared client (user decision), all 4 providers + `MockProvider`, `ask()` as plain-text completion (structured parsing deferred to the scanner pipeline spec), Vitest unit tests included (user decision), typed `AIProviderError` classification, lazy registry, and documented env vars.
 - Completed Domain Onboarding implementation (2026-08-05): Created `app/onboarding/layout.tsx` (standalone brand layout), `app/onboarding/page.tsx` (server component with `auth.protect()` + company redirect guard), `components/onboarding/onboarding-form.tsx` (client form using shared validation + `createCompany` helper + `router.push`), and updated `app/(auth)/sign-up/[[...sign-up]]/page.tsx` with `afterSignUpUrl="/onboarding"`. Build verified clean.
 - Completed AI Provider Abstraction implementation (2026-08-06): Created `lib/providers/` (`types.ts`, `errors.ts`, `config.ts`, `openai.ts`, `anthropic.ts`, `gemini.ts`, `perplexity.ts`, `mock.ts`, `registry.ts`, `index.ts`) wrapping Vercel AI SDK behind standard `AIProvider.ask()` interface with `MockProvider`, lazy singletons, typed error taxonomy, and co-located Vitest unit tests (`config.test.ts`, `mock.test.ts`, `registry.test.ts`). Build and tests verified clean.
+- Wrote Prompt Library spec (2026-08-07): Created `10-prompt-library.md` — user decisions captured: extend `Prompt` with nullable `companyId` + `PromptSource` enum (`CURATED` / `AI_SUGGESTED`, one-table model, requires migration), on-demand `POST /api/prompts/generate` with a best-effort onboarding kickoff (non-blocking, failures silent), and API + lib + tests only (no UI — prompt display belongs to the dashboard spec). Spec covers ~100 curated prompts in `lib/prompts/curated.ts` seeded idempotently via `prisma/seed.ts` (skip-if-present guard; no unique key on `text`), thin DB helpers in `lib/db/prompts.ts` (`getPromptsForCompany`, `replaceCompanySuggestions` in a transaction), a `lib/prompts/generator.ts` pipeline through `lib/providers/` (first configured provider, temperature 0.8, maxTokens 4096, JSON parsing + dedupe + cap 20/50), `GET /api/prompts` + `POST /api/prompts/generate` with `{ data }` / `{ error: { message } }` envelopes, `tsx` + `migrations.seed` wiring for Prisma v7 seeding, and co-located Vitest tests (curated data integrity, parse/filter, MockProvider-driven generation).
 

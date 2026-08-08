@@ -34,6 +34,8 @@ export function OnboardingForm() {
 
     try {
       await createCompany(normalized);
+      // Kick off AI prompt generation best-effort (non-blocking)
+      fetch("/api/prompts/generate", { method: "POST" }).catch(() => {});
       // Success — navigate to the dashboard (now renders the company state).
       router.push("/editor");
     } catch (err) {

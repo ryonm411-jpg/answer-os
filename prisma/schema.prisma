@@ -27,6 +27,11 @@ enum Sentiment {
   NEGATIVE
 }
 
+enum PromptSource {
+  CURATED
+  AI_SUGGESTED
+}
+
 model User {
   id        String   @id @default(cuid())
   clerkId   String   @unique
@@ -45,6 +50,7 @@ model Company {
   domain          String           @unique
   industry        String?
   competitors     Competitor[]
+  prompts         Prompt[]
   scans           Scan[]
   recommendations Recommendation[]
   createdAt       DateTime         @default(now())
@@ -85,11 +91,17 @@ model ScanResult {
 
 model Prompt {
   id           String       @id @default(cuid())
+  companyId    String?
+  company      Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  source       PromptSource @default(CURATED)
   text         String
   category     String
   searchVolume Int?
   results      ScanResult[]
   createdAt    DateTime     @default(now())
+
+  @@index([companyId])
+  @@index([category])
 }
 
 model Competitor {
@@ -107,7 +119,7 @@ model Competitor {
 model Recommendation {
   id              String   @id @default(cuid())
   companyId       String
-  company         Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  company          Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   title           String
   description     String
   priority        Int
