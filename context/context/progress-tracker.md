@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- Set up Trigger.dev background jobs for scanning
+- Build the visibility scanner pipeline
 
 ## Completed
 
@@ -29,6 +29,7 @@ Update this file after every meaningful implementation change.
 - Implemented Domain Onboarding (`context/features-specs/08-domain-onboarding.md`): Created `app/onboarding/layout.tsx` (minimal standalone layout with AnswerOS brand mark, outside the editor shell), `app/onboarding/page.tsx` (server component — `auth.protect()` + `redirect("/editor")` when company exists), `components/onboarding/onboarding-form.tsx` (client form — normalize → validate → `createCompany` → `router.push("/editor")`), and wired `afterSignUpUrl="/onboarding"` on the `<SignUp />` component. Uses shared `lib/utils/domain.ts` validation and `lib/api/domain.ts` fetch helper — no local copies.
 - Implemented AI Provider Abstraction (`context/features-specs/09-ai-provider-abstraction.md`): Built `lib/providers/` abstraction layer over OpenAI, Anthropic, Gemini, and Perplexity using the Vercel AI SDK, plus a deterministic `MockProvider` and typed `AIProviderError` taxonomy with `retryable` flags. Added lazy provider registry (`getProvider` / `getAvailableProviders`), `TO_PRISMA_PROVIDER` mapping, and co-located Vitest unit tests (`npm test` script).
 - Implemented Prompt Library (`context/features-specs/10-prompt-library.md`): Extended `Prompt` model with nullable `companyId` and `PromptSource` enum (`20260808020508_add_prompt_source_and_company`), built curated prompt library (`lib/prompts/curated.ts`) with 100 buyer question prompts across 11 categories, configured `prisma/seed.ts` with `tsx` runner for idempotent seeding, created thin Prisma helpers in `lib/db/prompts.ts`, implemented AI prompt suggestion generator (`lib/prompts/generator.ts`) via `lib/providers/` with JSON parsing, deduplication, curated catalog filtering, and `PromptGenerationError`, exposed `GET /api/prompts` and `POST /api/prompts/generate` REST endpoints, wired non-blocking onboarding kickoff, and added Vitest unit test suites.
+- Implemented Trigger.dev Background Jobs (`context/features-specs/11-trigger-dev-jobs.md`): Updated `trigger.config.ts` with non-deprecated `@trigger.dev/sdk` import, `./lib/jobs` task directory, and `prismaExtension({ mode: "modern" })` from `@trigger.dev/build/extensions/prisma`. Removed `src/trigger/` CLI scaffold. Built `lib/jobs/scan.ts` defining `runScan` background task (`id: "scan-company"`) with lifecycle management (`RUNNING` → `COMPLETED`/`FAILED`) and per-provider/prompt scanner loop stub. Created `POST /api/scans` endpoint with Clerk auth, single-active-scan guard (409), type-only task trigger, and status response envelope. Built client helper `lib/api/scans.ts` and updated `RunScanDialog` to trigger real scans with inline error handling. Added `"trigger:dev"` script to `package.json`.
 
 ## In Progress
 
@@ -36,15 +37,13 @@ Update this file after every meaningful implementation change.
 
 ## Next Up
 
-1. Set up Trigger.dev background jobs for scanning
-2. Build the visibility scanner pipeline
-3. Implement the visibility score algorithm
-4. Build the dashboard UI
-5. Set up Stripe subscriptions
-6. Implement weekly email reports via Resend
-9. Implement weekly email reports via Resend
-10. Add PostHog analytics and Sentry monitoring
-11. Deploy to Vercel production
+1. Build the visibility scanner pipeline
+2. Implement the visibility score algorithm
+3. Build the dashboard UI
+4. Set up Stripe subscriptions
+5. Implement weekly email reports via Resend
+6. Add PostHog analytics and Sentry monitoring
+7. Deploy to Vercel production
 
 ## Open Questions
 
@@ -95,4 +94,7 @@ Update this file after every meaningful implementation change.
 - Completed Domain Onboarding implementation (2026-08-05): Created `app/onboarding/layout.tsx` (standalone brand layout), `app/onboarding/page.tsx` (server component with `auth.protect()` + company redirect guard), `components/onboarding/onboarding-form.tsx` (client form using shared validation + `createCompany` helper + `router.push`), and updated `app/(auth)/sign-up/[[...sign-up]]/page.tsx` with `afterSignUpUrl="/onboarding"`. Build verified clean.
 - Completed AI Provider Abstraction implementation (2026-08-06): Created `lib/providers/` (`types.ts`, `errors.ts`, `config.ts`, `openai.ts`, `anthropic.ts`, `gemini.ts`, `perplexity.ts`, `mock.ts`, `registry.ts`, `index.ts`) wrapping Vercel AI SDK behind standard `AIProvider.ask()` interface with `MockProvider`, lazy singletons, typed error taxonomy, and co-located Vitest unit tests (`config.test.ts`, `mock.test.ts`, `registry.test.ts`). Build and tests verified clean.
 - Wrote Prompt Library spec (2026-08-07): Created `10-prompt-library.md` — user decisions captured: extend `Prompt` with nullable `companyId` + `PromptSource` enum (`CURATED` / `AI_SUGGESTED`, one-table model, requires migration), on-demand `POST /api/prompts/generate` with a best-effort onboarding kickoff (non-blocking, failures silent), and API + lib + tests only (no UI — prompt display belongs to the dashboard spec). Spec covers ~100 curated prompts in `lib/prompts/curated.ts` seeded idempotently via `prisma/seed.ts` (skip-if-present guard; no unique key on `text`), thin DB helpers in `lib/db/prompts.ts` (`getPromptsForCompany`, `replaceCompanySuggestions` in a transaction), a `lib/prompts/generator.ts` pipeline through `lib/providers/` (first configured provider, temperature 0.8, maxTokens 4096, JSON parsing + dedupe + cap 20/50), `GET /api/prompts` + `POST /api/prompts/generate` with `{ data }` / `{ error: { message } }` envelopes, `tsx` + `migrations.seed` wiring for Prisma v7 seeding, and co-located Vitest tests (curated data integrity, parse/filter, MockProvider-driven generation).
+- Wrote Trigger.dev background jobs spec (2026-08-07): Created `11-trigger-dev-jobs.md` — user decisions captured: jobs live in `lib/jobs/` (not the CLI scaffold's `src/trigger/`), setup + trigger wiring only (per-prompt scan execution deferred to the visibility scanner pipeline spec), and a single sequential `runScan` task (`id: "scan-company"`, payload `{ scanId }`). Spec corrects scaffold drift (`@trigger.dev/sdk/v3` deprecated alias → `@trigger.dev/sdk`; `dirs` → `./lib/jobs`; deletes `src/trigger/`), adds `prismaExtension({ mode: "modern" })` from `@trigger.dev/build/extensions/prisma` (Prisma 7 + Neon driver adapter; verified the subpath export against installed 4.5.10), documents `TRIGGER_SECRET_KEY` (DEV key, human step), and covers the lifecycle-managing task (RUNNING → COMPLETED/FAILED, `scanPrompt` pipeline stub), `POST /api/scans` (401/404/409 single-active-scan guard/502/202), `lib/api/scans.ts` + real `RunScanDialog` wiring (mock `setTimeout` removed), and the two-terminal dev workflow (`npm run dev` + `npx trigger.dev@latest dev`).
+- Completed Trigger.dev background jobs implementation (2026-08-08): Replaced `@trigger.dev/sdk/v3` imports with `@trigger.dev/sdk`, configured `dirs: ["./lib/jobs"]` and `prismaExtension({ mode: "modern" })` in `trigger.config.ts`, removed CLI scaffold `src/trigger/`, created `lib/jobs/scan.ts` defining `runScan` task, added `POST /api/scans` trigger route, `lib/api/scans.ts` client helper, and updated `RunScanDialog` with real scan triggers and inline error state.
+
 

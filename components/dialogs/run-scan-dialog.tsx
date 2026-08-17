@@ -1,5 +1,7 @@
 "use client";
 
+import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Scan } from "lucide-react";
 import {
   Dialog,
@@ -12,23 +14,42 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/hooks/use-dialogs";
+import { triggerScan } from "@/lib/api/scans";
 
 export function RunScanDialog() {
   const { activeDialog, isLoading, closeDialog, setLoading } = useDialogs();
+  const router = useRouter();
+  const [error, setError] = React.useState("");
 
   const isOpen = activeDialog === "run-scan";
 
-  const handleConfirm = () => {
-    // Mock scan start — no background job implementation
+
+
+  const handleConfirm = async () => {
+    setError("");
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      await triggerScan();
+      router.refresh();
       closeDialog();
-    }, 500);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to start scan"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setError("");
+      closeDialog();
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && closeDialog()}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <div className="flex items-center gap-2">
@@ -40,6 +61,12 @@ export function RunScanDialog() {
             while the scan runs in the background.
           </DialogDescription>
         </DialogHeader>
+
+        {error && (
+          <p className="text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        )}
 
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>
@@ -53,3 +80,4 @@ export function RunScanDialog() {
     </Dialog>
   );
 }
+
