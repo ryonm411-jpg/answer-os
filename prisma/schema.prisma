@@ -83,6 +83,7 @@ model ScanResult {
   reasoning            String?
   rawResponse          String?
   competitorsMentioned Json?
+  error                String?    // non-null ⇔ this prompt×provider check failed; mentioned is then always false
   createdAt            DateTime   @default(now())
 
   @@index([scanId])

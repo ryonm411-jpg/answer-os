@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- Build the visibility scanner pipeline
+- Implement the visibility score algorithm
 
 ## Completed
 
@@ -30,6 +30,7 @@ Update this file after every meaningful implementation change.
 - Implemented AI Provider Abstraction (`context/features-specs/09-ai-provider-abstraction.md`): Built `lib/providers/` abstraction layer over OpenAI, Anthropic, Gemini, and Perplexity using the Vercel AI SDK, plus a deterministic `MockProvider` and typed `AIProviderError` taxonomy with `retryable` flags. Added lazy provider registry (`getProvider` / `getAvailableProviders`), `TO_PRISMA_PROVIDER` mapping, and co-located Vitest unit tests (`npm test` script).
 - Implemented Prompt Library (`context/features-specs/10-prompt-library.md`): Extended `Prompt` model with nullable `companyId` and `PromptSource` enum (`20260808020508_add_prompt_source_and_company`), built curated prompt library (`lib/prompts/curated.ts`) with 100 buyer question prompts across 11 categories, configured `prisma/seed.ts` with `tsx` runner for idempotent seeding, created thin Prisma helpers in `lib/db/prompts.ts`, implemented AI prompt suggestion generator (`lib/prompts/generator.ts`) via `lib/providers/` with JSON parsing, deduplication, curated catalog filtering, and `PromptGenerationError`, exposed `GET /api/prompts` and `POST /api/prompts/generate` REST endpoints, wired non-blocking onboarding kickoff, and added Vitest unit test suites.
 - Implemented Trigger.dev Background Jobs (`context/features-specs/11-trigger-dev-jobs.md`): Updated `trigger.config.ts` with non-deprecated `@trigger.dev/sdk` import, `./lib/jobs` task directory, and `prismaExtension({ mode: "modern" })` from `@trigger.dev/build/extensions/prisma`. Removed `src/trigger/` CLI scaffold. Built `lib/jobs/scan.ts` defining `runScan` background task (`id: "scan-company"`) with lifecycle management (`RUNNING` → `COMPLETED`/`FAILED`) and per-provider/prompt scanner loop stub. Created `POST /api/scans` endpoint with Clerk auth, single-active-scan guard (409), type-only task trigger, and status response envelope. Built client helper `lib/api/scans.ts` and updated `RunScanDialog` to trigger real scans with inline error handling. Added `"trigger:dev"` script to `package.json`.
+- Implemented Visibility Scanner Pipeline (`context/features-specs/12-visibility-scanner-pipeline.md`): Installed `@upstash/redis` for REST-based caching, added nullable `error` column to `ScanResult` (`20260819221056_add_scan_result_error`), built `lib/scan/config.ts` (4096 tokens, 0.2 temperature, bounded retry constants), `lib/scan/prompt.ts` (`buildScanPrompt` with JSON metadata contract), `lib/scan/parse.ts` (`parseScanResponse` tolerant extraction & normalization), `lib/utils/cache.ts` (lazy Upstash Redis cache-before-persist layer with 24h TTL and graceful degradation), `lib/db/results.ts` (`deleteScanResults`, batched `createScanResults`, `getResultsForScan`), updated `lib/jobs/scan.ts` (`runScan` with real `scanPrompt`, cache-first checks, `askWithRetry` for retryable provider errors, per-prompt error rows, retry idempotency), and added stale-`PENDING` (>10 min) sweep to `POST /api/scans`. Co-located Vitest unit test suites added for prompt, parser, and cache layer.
 
 ## In Progress
 
@@ -37,13 +38,12 @@ Update this file after every meaningful implementation change.
 
 ## Next Up
 
-1. Build the visibility scanner pipeline
-2. Implement the visibility score algorithm
-3. Build the dashboard UI
-4. Set up Stripe subscriptions
-5. Implement weekly email reports via Resend
-6. Add PostHog analytics and Sentry monitoring
-7. Deploy to Vercel production
+1. Implement the visibility score algorithm
+2. Build the dashboard UI
+3. Set up Stripe subscriptions
+4. Implement weekly email reports via Resend
+5. Add PostHog analytics and Sentry monitoring
+6. Deploy to Vercel production
 
 ## Open Questions
 
@@ -55,6 +55,8 @@ Update this file after every meaningful implementation change.
 - PostHog vs alternative analytics (will revisit after initial setup)
 - Exact default model IDs per provider (`DEFAULT_MODELS` in `lib/providers/config.ts`) — verify current identifiers at implementation time (spec assumes `gpt-4o`, `claude-3-5-sonnet-latest`, `gemini-2.5-flash`, `sonar`)
 - Default timeout value for provider calls (spec assumes 30s)
+- Upstash Redis human setup (spec 12): user must create an Upstash database and provide `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` before the cache layer is active (scanning degrades to Postgres-only until then)
+- Scan-prompt bias (spec 12, Decision #12): injecting the tracked company into the scan prompt may bias model responses; acceptable for MVP, revisit with a non-injective prompt variant if bias becomes measurable
 
 ## Architecture Decisions
 
@@ -76,6 +78,8 @@ Update this file after every meaningful implementation change.
 | 2026-08-03 | Global `DialogProvider` Context for Dialog System                       | Allows any component in the editor tree to trigger dialogs |
 | 2026-08-04 | Prisma v7 + Neon serverless driver adapter in `lib/db/prisma.ts`       | Enables serverless database connection pooling & WebSocket support |
 | 2026-08-05 | REST API in `app/api/domain/route.ts` with Clerk auth & standard response envelope | Enforces single-company constraint, domain normalization, and uniform `{ data }` / `{ error: { message } }` HTTP responses |
+| 2026-08-16 | Pipeline logic in `lib/scan/` pure modules + Upstash Redis cache-before-persist | Keeps core logic unit-testable and thin, satisfies Invariant #3, saves AI provider spend on re-scans |
+| 2026-08-16 | Bounded retry for retryable provider errors + error row recording       | Prevents transient rate limits from failing scans while isolating failed checks for accurate visibility scoring |
 
 ## Session Notes
 
@@ -96,5 +100,8 @@ Update this file after every meaningful implementation change.
 - Wrote Prompt Library spec (2026-08-07): Created `10-prompt-library.md` — user decisions captured: extend `Prompt` with nullable `companyId` + `PromptSource` enum (`CURATED` / `AI_SUGGESTED`, one-table model, requires migration), on-demand `POST /api/prompts/generate` with a best-effort onboarding kickoff (non-blocking, failures silent), and API + lib + tests only (no UI — prompt display belongs to the dashboard spec). Spec covers ~100 curated prompts in `lib/prompts/curated.ts` seeded idempotently via `prisma/seed.ts` (skip-if-present guard; no unique key on `text`), thin DB helpers in `lib/db/prompts.ts` (`getPromptsForCompany`, `replaceCompanySuggestions` in a transaction), a `lib/prompts/generator.ts` pipeline through `lib/providers/` (first configured provider, temperature 0.8, maxTokens 4096, JSON parsing + dedupe + cap 20/50), `GET /api/prompts` + `POST /api/prompts/generate` with `{ data }` / `{ error: { message } }` envelopes, `tsx` + `migrations.seed` wiring for Prisma v7 seeding, and co-located Vitest tests (curated data integrity, parse/filter, MockProvider-driven generation).
 - Wrote Trigger.dev background jobs spec (2026-08-07): Created `11-trigger-dev-jobs.md` — user decisions captured: jobs live in `lib/jobs/` (not the CLI scaffold's `src/trigger/`), setup + trigger wiring only (per-prompt scan execution deferred to the visibility scanner pipeline spec), and a single sequential `runScan` task (`id: "scan-company"`, payload `{ scanId }`). Spec corrects scaffold drift (`@trigger.dev/sdk/v3` deprecated alias → `@trigger.dev/sdk`; `dirs` → `./lib/jobs`; deletes `src/trigger/`), adds `prismaExtension({ mode: "modern" })` from `@trigger.dev/build/extensions/prisma` (Prisma 7 + Neon driver adapter; verified the subpath export against installed 4.5.10), documents `TRIGGER_SECRET_KEY` (DEV key, human step), and covers the lifecycle-managing task (RUNNING → COMPLETED/FAILED, `scanPrompt` pipeline stub), `POST /api/scans` (401/404/409 single-active-scan guard/502/202), `lib/api/scans.ts` + real `RunScanDialog` wiring (mock `setTimeout` removed), and the two-terminal dev workflow (`npm run dev` + `npx trigger.dev@latest dev`).
 - Completed Trigger.dev background jobs implementation (2026-08-08): Replaced `@trigger.dev/sdk/v3` imports with `@trigger.dev/sdk`, configured `dirs: ["./lib/jobs"]` and `prismaExtension({ mode: "modern" })` in `trigger.config.ts`, removed CLI scaffold `src/trigger/`, created `lib/jobs/scan.ts` defining `runScan` task, added `POST /api/scans` trigger route, `lib/api/scans.ts` client helper, and updated `RunScanDialog` with real scan triggers and inline error state.
+- Wrote Visibility Scanner Pipeline spec (2026-08-16): Created `12-visibility-scanner-pipeline.md` — user decisions captured: **include Upstash Redis now** (`@upstash/redis`, `UPSTASH_REDIS_REST_URL`/`TOKEN`, cache-before-persist write path satisfying invariant #3) and **add `ScanResult.error String?`** (migration `add_scan_result_error`) so failed checks are distinguishable from clean non-mentions. Spec fills the `scanPrompt` stub from 11: `lib/scan/` pure modules (`config.ts` 4096 tokens/0.2 temp + retry backoff, `prompt.ts` with JSON metadata contract, `parse.ts` with tolerant JSON extraction + normalization table and unit tests), `lib/utils/cache.ts` (lazy Upstash client, key `scan:{companyId}:{promptId}:{provider}`, 24h TTL, non-fatal degradation), `lib/db/results.ts` (`deleteScanResults` retry idempotency + batched `createScanResults`), real `scanPrompt` with cache-first reads, `askWithRetry` (bounded backoff for `retryable` `AIProviderError` only), per-prompt `error` rows, and the assigned stale-`PENDING` (>10 min → FAILED) sweep in `POST /api/scans`.
+- Completed Visibility Scanner Pipeline implementation (2026-08-19): Added `ScanResult.error String?` to Prisma schema and generated migration `20260819221056_add_scan_result_error`, installed `@upstash/redis`, built pure modules `lib/scan/config.ts`, `lib/scan/prompt.ts`, `lib/scan/parse.ts`, created lazy Redis caching layer in `lib/utils/cache.ts` with 24h TTL and graceful degradation, created database helpers in `lib/db/results.ts`, implemented complete scanner execution loop with `askWithRetry` and retry idempotency in `lib/jobs/scan.ts`, added stale-`PENDING` sweep to `POST /api/scans`, and added unit tests in `lib/scan/prompt.test.ts`, `lib/scan/parse.test.ts`, and `lib/utils/cache.test.ts`. Build and all 46 unit tests verified clean.
+
 
 

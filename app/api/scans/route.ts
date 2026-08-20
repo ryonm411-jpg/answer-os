@@ -27,6 +27,18 @@ export async function POST() {
     );
   }
 
+  // Stale-PENDING recovery (12, Decision #11): a trigger that was accepted but
+  // never dequeued must not block future scans forever.
+  const STALE_PENDING_MS = 10 * 60 * 1000;
+  await prisma.scan.updateMany({
+    where: {
+      companyId: company.id,
+      status: "PENDING",
+      createdAt: { lt: new Date(Date.now() - STALE_PENDING_MS) },
+    },
+    data: { status: "FAILED", completedAt: new Date() },
+  });
+
   // Reject a second scan while one is already PENDING or RUNNING (Decision #7)
   const activeScan = await prisma.scan.findFirst({
     where: {

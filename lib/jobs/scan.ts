@@ -1,22 +1,140 @@
 import { task, logger, AbortTaskRunError } from "@trigger.dev/sdk";
 import { prisma } from "@/lib/db/prisma";
 import { getPromptsForCompany } from "@/lib/db/prompts";
+import { deleteScanResults, createScanResults } from "@/lib/db/results";
+import type { ScanResultInput } from "@/lib/db/results";
+import { AIProviderError } from "@/lib/providers/errors";
 import { getAvailableProviders } from "@/lib/providers/registry";
-import type { AIProvider } from "@/lib/providers/types";
+import { TO_PRISMA_PROVIDER } from "@/lib/providers/types";
+import type { AIProvider, AIResponse } from "@/lib/providers/types";
+import { buildScanPrompt } from "@/lib/scan/prompt";
+import { parseScanResponse } from "@/lib/scan/parse";
+import {
+  SCAN_MAX_TOKENS,
+  SCAN_TEMPERATURE,
+  SCAN_PROVIDER_MAX_ATTEMPTS,
+  SCAN_RETRY_BASE_MS,
+  SCAN_RETRY_MAX_MS,
+} from "@/lib/scan/config";
+import { scanResultKey, getCachedScanResult, setCachedScanResult } from "@/lib/utils/cache";
 
-/**
- * Placeholder for the visibility scanner pipeline spec (tracker #2).
- * Replaced by the real implementation: provider.ask(prompt), parse
- * mention/position/sentiment, Redis cache, persist ScanResult rows.
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function scanPrompt(_provider: AIProvider, _prompt: { id: string; text: string }, _scanId: string): Promise<void> {
-  // pipeline spec — intentionally a no-op here
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Bounded retries for retryable provider errors (Decision #3). */
+async function askWithRetry(provider: AIProvider, prompt: string): Promise<AIResponse> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < SCAN_PROVIDER_MAX_ATTEMPTS; attempt++) {
+    try {
+      return await provider.ask(prompt, {
+        maxTokens: SCAN_MAX_TOKENS,
+        temperature: SCAN_TEMPERATURE,
+      });
+    } catch (error) {
+      lastError = error;
+      const retryable = error instanceof AIProviderError && error.retryable;
+      if (!retryable || attempt === SCAN_PROVIDER_MAX_ATTEMPTS - 1) throw error;
+      const backoff = Math.min(SCAN_RETRY_BASE_MS * 2 ** attempt, SCAN_RETRY_MAX_MS);
+      logger.warn("Provider call retrying", {
+        provider: provider.name,
+        attempt: attempt + 1,
+        backoffMs: backoff,
+      });
+      await sleep(backoff);
+    }
+  }
+  throw lastError; // unreachable — TS exhaustiveness
+}
+
+/** One provider × prompt check → one ScanResultInput (Decision #7, #8, #9). */
+async function scanPrompt(input: {
+  provider: AIProvider;
+  prompt: { id: string; text: string };
+  company: { id: string; name: string; domain: string };
+}): Promise<ScanResultInput> {
+  const { provider, prompt, company } = input;
+  // TO_PRISMA_PROVIDER is Record<AIProviderName, string> — cast to the Prisma enum
+  const prismaProvider = TO_PRISMA_PROVIDER[provider.name] as import("@/generated/prisma").AIProvider;
+  const cacheKey = scanResultKey(company.id, prompt.id, provider.name);
+
+  // Cache-first: a 24h-hit skips the provider call entirely but still persists (Decision #7).
+  const cached = await getCachedScanResult(cacheKey);
+  if (cached) {
+    return {
+      promptId: prompt.id,
+      provider: prismaProvider,
+      mentioned: cached.mentioned,
+      position: cached.position,
+      sentiment: cached.sentiment,
+      reasoning: cached.reasoning,
+      rawResponse: null, // only the parsed result is cached (Decision #7)
+      competitorsMentioned: cached.competitors,
+      error: null,
+    };
+  }
+
+  try {
+    const response = await askWithRetry(
+      provider,
+      buildScanPrompt({
+        question: prompt.text,
+        companyName: company.name,
+        companyDomain: company.domain,
+      })
+    );
+
+    const parsed = parseScanResponse(response.content);
+    if (!parsed.ok) {
+      // Unparseable response → error row, raw response preserved for debugging.
+      return {
+        promptId: prompt.id,
+        provider: prismaProvider,
+        mentioned: false,
+        position: null,
+        sentiment: null,
+        reasoning: null,
+        rawResponse: response.content,
+        competitorsMentioned: null,
+        error: parsed.error,
+      };
+    }
+
+    // Cache BEFORE persist (invariant #3). Failures are never cached.
+    await setCachedScanResult(cacheKey, parsed.data);
+
+    return {
+      promptId: prompt.id,
+      provider: prismaProvider,
+      mentioned: parsed.data.mentioned,
+      position: parsed.data.position,
+      sentiment: parsed.data.sentiment,
+      reasoning: parsed.data.reasoning,
+      rawResponse: response.content,
+      competitorsMentioned: parsed.data.competitors,
+      error: null,
+    };
+  } catch (error) {
+    // Provider Integration Checklist #6: provider failures surface as error rows,
+    // never unhandled exceptions. Anything that isn't an AIProviderError is
+    // unexpected and fails the scan (retried by the SDK).
+    if (error instanceof AIProviderError) {
+      return {
+        promptId: prompt.id,
+        provider: prismaProvider,
+        mentioned: false,
+        position: null,
+        sentiment: null,
+        reasoning: null,
+        rawResponse: null,
+        competitorsMentioned: null,
+        error: error.message,
+      };
+    }
+    throw error;
+  }
 }
 
 export const runScan = task({
   id: "scan-company",
-  // maxDuration inherits 3600 from the config; no queue/concurrency yet (Decision #4)
   run: async (payload: { scanId: string }, { ctx }) => {
     const { scanId } = payload;
 
@@ -24,52 +142,65 @@ export const runScan = task({
       where: { id: scanId },
       include: { company: true },
     });
-    if (!scan) {
-      // Replayed from the dashboard against a deleted scan — nothing to do.
-      // Non-retryable: abort so Trigger.dev doesn't retry 3 times for a missing row.
-      throw new AbortTaskRunError("Scan not found");
-    }
+    if (!scan) throw new AbortTaskRunError("Scan not found");
 
-    // RUNNING + startedAt
     await prisma.scan.update({
       where: { id: scanId },
       data: { status: "RUNNING", startedAt: new Date() },
     });
 
     try {
-      const prompts = await getPromptsForCompany(scan.companyId);
-      const providers = getAvailableProviders(); // only configured providers (09)
+      const [prompts, providers] = await Promise.all([
+        getPromptsForCompany(scan.companyId),
+        Promise.resolve(getAvailableProviders()),
+      ]);
 
-      // Sequential scaffold — fan-out/concurrency is post-MVP (Decision #4)
+      await deleteScanResults(scanId); // retry idempotency (Decision #8)
+
+      const results: ScanResultInput[] = [];
       for (const provider of providers) {
         for (const prompt of prompts) {
-          await scanPrompt(provider, prompt, scanId);
+          results.push(
+            await scanPrompt({
+              provider,
+              prompt: { id: prompt.id, text: prompt.text },
+              company: scan.company,
+            })
+          );
         }
       }
 
+      await createScanResults(scanId, results);
       await prisma.scan.update({
         where: { id: scanId },
         data: { status: "COMPLETED", completedAt: new Date() },
       });
 
+      const failed = results.filter((r) => r.error).length;
       logger.info("Scan completed", {
         scanId,
         companyId: scan.companyId,
         prompts: prompts.length,
         providers: providers.length,
+        results: results.length,
+        failed,
         attempt: ctx.attempt.number,
       });
 
-      return { status: "COMPLETED", prompts: prompts.length, providers: providers.length };
+      return {
+        status: "COMPLETED",
+        prompts: prompts.length,
+        providers: providers.length,
+        results: results.length,
+        failed,
+      };
     } catch (error) {
-      // Never an unhandled exception (Provider Integration Checklist #6):
-      // surface as FAILED so the dashboard/report can show it.
       await prisma.scan.update({
         where: { id: scanId },
         data: { status: "FAILED", completedAt: new Date() },
       });
       logger.error("Scan failed", { scanId, error });
-      throw error; // let Trigger.dev retry (config default: 3 attempts)
+      throw error; // SDK retry (config default: 3 attempts)
     }
   },
 });
