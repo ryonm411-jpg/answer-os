@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- Implement the visibility score algorithm
+- Build the dashboard UI
 
 ## Completed
 
@@ -30,7 +30,8 @@ Update this file after every meaningful implementation change.
 - Implemented AI Provider Abstraction (`context/features-specs/09-ai-provider-abstraction.md`): Built `lib/providers/` abstraction layer over OpenAI, Anthropic, Gemini, and Perplexity using the Vercel AI SDK, plus a deterministic `MockProvider` and typed `AIProviderError` taxonomy with `retryable` flags. Added lazy provider registry (`getProvider` / `getAvailableProviders`), `TO_PRISMA_PROVIDER` mapping, and co-located Vitest unit tests (`npm test` script).
 - Implemented Prompt Library (`context/features-specs/10-prompt-library.md`): Extended `Prompt` model with nullable `companyId` and `PromptSource` enum (`20260808020508_add_prompt_source_and_company`), built curated prompt library (`lib/prompts/curated.ts`) with 100 buyer question prompts across 11 categories, configured `prisma/seed.ts` with `tsx` runner for idempotent seeding, created thin Prisma helpers in `lib/db/prompts.ts`, implemented AI prompt suggestion generator (`lib/prompts/generator.ts`) via `lib/providers/` with JSON parsing, deduplication, curated catalog filtering, and `PromptGenerationError`, exposed `GET /api/prompts` and `POST /api/prompts/generate` REST endpoints, wired non-blocking onboarding kickoff, and added Vitest unit test suites.
 - Implemented Trigger.dev Background Jobs (`context/features-specs/11-trigger-dev-jobs.md`): Updated `trigger.config.ts` with non-deprecated `@trigger.dev/sdk` import, `./lib/jobs` task directory, and `prismaExtension({ mode: "modern" })` from `@trigger.dev/build/extensions/prisma`. Removed `src/trigger/` CLI scaffold. Built `lib/jobs/scan.ts` defining `runScan` background task (`id: "scan-company"`) with lifecycle management (`RUNNING` → `COMPLETED`/`FAILED`) and per-provider/prompt scanner loop stub. Created `POST /api/scans` endpoint with Clerk auth, single-active-scan guard (409), type-only task trigger, and status response envelope. Built client helper `lib/api/scans.ts` and updated `RunScanDialog` to trigger real scans with inline error handling. Added `"trigger:dev"` script to `package.json`.
-- Implemented Visibility Scanner Pipeline (`context/features-specs/12-visibility-scanner-pipeline.md`): Installed `@upstash/redis` for REST-based caching, added nullable `error` column to `ScanResult` (`20260819221056_add_scan_result_error`), built `lib/scan/config.ts` (4096 tokens, 0.2 temperature, bounded retry constants), `lib/scan/prompt.ts` (`buildScanPrompt` with JSON metadata contract), `lib/scan/parse.ts` (`parseScanResponse` tolerant extraction & normalization), `lib/utils/cache.ts` (lazy Upstash Redis cache-before-persist layer with 24h TTL and graceful degradation), `lib/db/results.ts` (`deleteScanResults`, batched `createScanResults`, `getResultsForScan`), updated `lib/jobs/scan.ts` (`runScan` with real `scanPrompt`, cache-first checks, `askWithRetry` for retryable provider errors, per-prompt error rows, retry idempotency), and added stale-`PENDING` (>10 min) sweep to `POST /api/scans`. Co-located Vitest unit test suites added for prompt, parser, and cache layer.
+- Implemented Visibility Score Algorithm (`context/features-specs/13-visibility-score.md`): Built pure `lib/scoring/` modules (`weights.ts` with 30/25/20/15/10 weight constants and total sum assertion, `calculator.ts` with `ScoreResultRow`/`VisibilityFactors`/`ScoreSummary`/`ScoredScan` types, per-factor score formulas, error row exclusion, zero-valid-row `score: null` handling, clamping 0–100 and rounding) and thin server-side Prisma orchestrator in `lib/db/scoring.ts` (`getLatestCompletedScan`, `getCompanyScore`). Added co-located Vitest test suites (`weights.test.ts`, `calculator.test.ts`) covering factor math, edge cases, worked example (64), contrast cases (13, 5), and perfect ceiling (95).
+- Wrote Dashboard UI context (`context/features-specs/14-dashboard-ui.md`): Defined the server-first dashboard data contract and component boundaries, score/factor/mentions/trend/prompt/competitor/recommendation panels, all empty/loading/error states, responsive and accessible behavior, dependency-free SVG/CSS chart guidance, and the rule to display competitor mentions rather than unsupported competitor scores. The spec begins with a mandatory `CLAUDE.md` read and keeps score calculation server-side.
 
 ## In Progress
 
@@ -38,12 +39,11 @@ Update this file after every meaningful implementation change.
 
 ## Next Up
 
-1. Implement the visibility score algorithm
-2. Build the dashboard UI
-3. Set up Stripe subscriptions
-4. Implement weekly email reports via Resend
-5. Add PostHog analytics and Sentry monitoring
-6. Deploy to Vercel production
+1. Build the dashboard UI
+2. Set up Stripe subscriptions
+3. Implement weekly email reports via Resend
+4. Add PostHog analytics and Sentry monitoring
+5. Deploy to Vercel production
 
 ## Open Questions
 
@@ -80,6 +80,7 @@ Update this file after every meaningful implementation change.
 | 2026-08-05 | REST API in `app/api/domain/route.ts` with Clerk auth & standard response envelope | Enforces single-company constraint, domain normalization, and uniform `{ data }` / `{ error: { message } }` HTTP responses |
 | 2026-08-16 | Pipeline logic in `lib/scan/` pure modules + Upstash Redis cache-before-persist | Keeps core logic unit-testable and thin, satisfies Invariant #3, saves AI provider spend on re-scans |
 | 2026-08-16 | Bounded retry for retryable provider errors + error row recording       | Prevents transient rate limits from failing scans while isolating failed checks for accurate visibility scoring |
+| 2026-08-19 | Visibility score: pure `lib/scoring/` calculator + thin `lib/db/scoring.ts` orchestrator, error rows excluded, latest COMPLETED scan read from Postgres, competitor share from `competitorsMentioned`, source authority constant-neutral 0.5 (user decision) | Keeps scoring unit-testable and server-only (invariant #4) while staying honest about data the pipeline doesn't capture yet |
 
 ## Session Notes
 
@@ -102,6 +103,10 @@ Update this file after every meaningful implementation change.
 - Completed Trigger.dev background jobs implementation (2026-08-08): Replaced `@trigger.dev/sdk/v3` imports with `@trigger.dev/sdk`, configured `dirs: ["./lib/jobs"]` and `prismaExtension({ mode: "modern" })` in `trigger.config.ts`, removed CLI scaffold `src/trigger/`, created `lib/jobs/scan.ts` defining `runScan` task, added `POST /api/scans` trigger route, `lib/api/scans.ts` client helper, and updated `RunScanDialog` with real scan triggers and inline error state.
 - Wrote Visibility Scanner Pipeline spec (2026-08-16): Created `12-visibility-scanner-pipeline.md` — user decisions captured: **include Upstash Redis now** (`@upstash/redis`, `UPSTASH_REDIS_REST_URL`/`TOKEN`, cache-before-persist write path satisfying invariant #3) and **add `ScanResult.error String?`** (migration `add_scan_result_error`) so failed checks are distinguishable from clean non-mentions. Spec fills the `scanPrompt` stub from 11: `lib/scan/` pure modules (`config.ts` 4096 tokens/0.2 temp + retry backoff, `prompt.ts` with JSON metadata contract, `parse.ts` with tolerant JSON extraction + normalization table and unit tests), `lib/utils/cache.ts` (lazy Upstash client, key `scan:{companyId}:{promptId}:{provider}`, 24h TTL, non-fatal degradation), `lib/db/results.ts` (`deleteScanResults` retry idempotency + batched `createScanResults`), real `scanPrompt` with cache-first reads, `askWithRetry` (bounded backoff for `retryable` `AIProviderError` only), per-prompt `error` rows, and the assigned stale-`PENDING` (>10 min → FAILED) sweep in `POST /api/scans`.
 - Completed Visibility Scanner Pipeline implementation (2026-08-19): Added `ScanResult.error String?` to Prisma schema and generated migration `20260819221056_add_scan_result_error`, installed `@upstash/redis`, built pure modules `lib/scan/config.ts`, `lib/scan/prompt.ts`, `lib/scan/parse.ts`, created lazy Redis caching layer in `lib/utils/cache.ts` with 24h TTL and graceful degradation, created database helpers in `lib/db/results.ts`, implemented complete scanner execution loop with `askWithRetry` and retry idempotency in `lib/jobs/scan.ts`, added stale-`PENDING` sweep to `POST /api/scans`, and added unit tests in `lib/scan/prompt.test.ts`, `lib/scan/parse.test.ts`, and `lib/utils/cache.test.ts`. Build and all 46 unit tests verified clean.
+- Wrote Visibility Score spec (2026-08-19): Created `13-visibility-score.md` (tracker Next Up #1). Pure Prisma-free calculator in `lib/scoring/` (`weights.ts` constants matching the documented 30/25/20/15/10 table + `calculator.ts` with per-factor formulas, worked example → 64, and the 95 honest ceiling) orchestrated by a thin server-only `lib/db/scoring.ts` (`getLatestCompletedScan` + `getCompanyScore`) that reads the latest COMPLETED scan from Postgres and maps rows with error rows excluded. User decisions captured: source authority stays a constant-neutral 0.5 with the 10% weight intact (pipeline captures no citation data yet; 100 unreachable until real source data lands), competitor share computed from `competitorsMentioned` (not the `Competitor` table). No new deps, env vars, or schema changes; co-located Vitest suites specified. Spec opens with the mandatory `CLAUDE.md` read (the repo's agent-instruction entry point, `@`-importing `AGENTS.md`).
+- Completed Visibility Score implementation (2026-08-19): Implemented pure scoring engine (`lib/scoring/weights.ts`, `lib/scoring/calculator.ts`) and Prisma orchestrator (`lib/db/scoring.ts`). Added co-located Vitest suites (`weights.test.ts`, `calculator.test.ts`). Verified error row filtering, edge cases (0 valid rows → `score: null`), competitor presence calculation, clamping/rounding, worked example math (64), and perfect ceiling (95). All tests and build verified clean.
+- Wrote Dashboard UI context (2026-08-19): Created `14-dashboard-ui.md` for the next implementation unit. It requires reading `CLAUDE.md` first, keeps the initial page server-first with no visibility API route, defines the serialized dashboard read model and thin `lib/db/` helpers, covers score/history/prompt/competitor/recommendation presentation, and specifies intentional no-company, no-scan, running, partial-error, all-error, loading, and read-failure states.
+
 
 
 
