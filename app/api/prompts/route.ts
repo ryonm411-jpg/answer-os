@@ -64,7 +64,7 @@ export async function GET() {
         businessRelevance,
         competitiveGap: oppResult.competitiveGap,
         opportunityScore: oppResult.score,
-        isEstimated: !latestScan || oppResult.score === null,
+        isEstimated: oppResult.isEstimated,
         editable: prompt.source !== "CURATED" && prompt.companyId === company.id,
         createdAt: prompt.createdAt.toISOString(),
         updatedAt: prompt.updatedAt.toISOString(),

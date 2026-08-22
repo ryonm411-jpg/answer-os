@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Lightbulb, ArrowUpRight } from "lucide-react";
+import { Lightbulb } from "lucide-react";
 import type { DashboardRecommendationItem } from "@/lib/db/dashboard";
 
 interface RecommendationsListProps {
@@ -68,13 +68,6 @@ export function RecommendationsList({ recommendations }: RecommendationsListProp
                       {item.category}
                     </Badge>
                   </div>
-
-                  {item.estimatedImpact !== null && (
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                      <ArrowUpRight className="h-3.5 w-3.5" />
-                      +{item.estimatedImpact}% Impact
-                    </span>
-                  )}
                 </div>
 
                 <div className="space-y-1">

@@ -4,7 +4,7 @@
  * Pure, server-only module. No Prisma, React, or provider SDK imports.
  *
  * Formula:
- *   score = round(demandScore × competitiveGap × businessRelevance / 10000)
+ *   score = round(demandScore × competitiveGap × businessRelevance / 100)
  *
  * Where:
  *   demandScore        0..100  (AI estimate or fallback 50)

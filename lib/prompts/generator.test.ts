@@ -7,7 +7,7 @@ import {
   type PromptSuggestion,
 } from "./generator";
 import { PromptGenerationError } from "./errors";
-import { CURATED_PROMPTS, normalizePromptText } from "./curated";
+import { normalizePromptText } from "./curated";
 
 describe("parseSuggestions", () => {
   it("parses a plain JSON array string", () => {
@@ -82,12 +82,14 @@ describe("filterSuggestions", () => {
     expect(res[1].businessRelevance).toBe(70);
   });
 
-  it("maps unknown categories to 'Other'", () => {
+  it("preserves non-empty category string or uses fallbackCategory", () => {
     const raw: Partial<PromptSuggestion>[] = [
-      { text: "Something unique question?", category: "UnheardCategory" },
+      { text: "Something unique question?", category: "Barefoot Footwear" },
+      { text: "Another question without category?", category: "" },
     ];
-    const res = filterSuggestions(raw, curatedSet, 20);
-    expect(res[0].category).toBe("Other");
+    const res = filterSuggestions(raw, curatedSet, 20, "Footwear");
+    expect(res[0].category).toBe("Barefoot Footwear");
+    expect(res[1].category).toBe("Footwear");
   });
 
   it("respects max cap limit", () => {

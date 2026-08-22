@@ -76,7 +76,7 @@ Hope this helps!`;
   });
 
   it("extracts JSON wrapped in prose without markdown fences", () => {
-    const raw = `Some introductory explanation. {"mentioned": false, "position": null, "sentiment": null, "reasoning": null, "competitors": [{"name": "OtherCo", "position": 1, "sentiment": "positive"}]} End of answer.`;
+    const raw = `Some introductory explanation. {"mentioned": false, "position": null, "sentiment": null, "reasoning": null, "competitors": [{"name": "Vivobarefoot", "position": 1, "sentiment": "positive"}]} End of answer.`;
 
     const result = parseScanResponse(raw);
     expect(result.ok).toBe(true);
@@ -86,7 +86,25 @@ Hope this helps!`;
       expect(result.data.sentiment).toBeNull();
       expect(result.data.reasoning).toBeNull();
       expect(result.data.competitors).toEqual([
-        { name: "OtherCo", position: 1, sentiment: "POSITIVE" },
+        { name: "Vivobarefoot", position: 1, sentiment: "POSITIVE" },
+      ]);
+    }
+  });
+
+  it("filters synthetic placeholder competitor names such as OtherCo", () => {
+    const raw = JSON.stringify({
+      mentioned: false,
+      competitors: [
+        { name: "OtherCo", position: 1 },
+        { name: "Other Company", position: 2 },
+        { name: "RealCompetitor", position: 3 },
+      ],
+    });
+    const result = parseScanResponse(raw);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.competitors).toEqual([
+        { name: "RealCompetitor", position: 3, sentiment: null },
       ]);
     }
   });

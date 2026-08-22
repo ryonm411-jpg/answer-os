@@ -44,6 +44,7 @@ export interface LatestScanSummary {
   totalChecks: number;
   validChecks: number;
   errorChecks: number;
+  coverageRate: number; // 0..1 valid checks ratio
 }
 
 export interface DashboardData {
@@ -82,16 +83,19 @@ export async function getLatestScanForCompany(companyId: string): Promise<Latest
     where: { scanId: scan.id, error: null },
   });
 
-  const errorChecks = Math.max(0, scan._count.results - validChecks);
+  const totalChecks = scan._count.results;
+  const errorChecks = Math.max(0, totalChecks - validChecks);
+  const coverageRate = totalChecks > 0 ? validChecks / totalChecks : 1.0;
 
   return {
     id: scan.id,
     status: scan.status,
     createdAt: scan.createdAt.toISOString(),
     completedAt: scan.completedAt ? scan.completedAt.toISOString() : null,
-    totalChecks: scan._count.results,
+    totalChecks,
     validChecks,
     errorChecks,
+    coverageRate,
   };
 }
 

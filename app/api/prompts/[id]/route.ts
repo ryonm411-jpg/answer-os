@@ -84,7 +84,7 @@ export async function PATCH(
     const body = await req.json();
     const { text, category, intent } = body ?? {};
 
-    const changes: { text?: string; category?: string; intent?: any } = {};
+    const changes: { text?: string; category?: string; intent?: PromptIntent } = {};
 
     if (text !== undefined) {
       if (typeof text !== "string") {

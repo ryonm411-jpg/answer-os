@@ -31,13 +31,18 @@ export function PromptGenerationActions({
   const [isSaving, setIsSaving] = React.useState(false);
   const [error, setError] = React.useState("");
 
-  React.useEffect(() => {
+  const [prevDesc, setPrevDesc] = React.useState(initialProductDesc);
+  const [prevInd, setPrevInd] = React.useState(initialIndustry);
+
+  if (initialProductDesc !== prevDesc || initialIndustry !== prevInd) {
+    setPrevDesc(initialProductDesc);
+    setPrevInd(initialIndustry);
     setProductDescription(initialProductDesc);
     setIndustry(initialIndustry);
     if (!initialProductDesc) {
       setIsEditingProfile(true);
     }
-  }, [initialProductDesc, initialIndustry]);
+  }
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -40,11 +40,11 @@ export function ScoreFactorBreakdown({ factors }: ScoreFactorBreakdownProps) {
       description: "Your mention share relative to competitor mentions detected across valid checks.",
     },
     {
-      name: "Source Authority",
+      name: "Source Authority (Neutral MVP Baseline)",
       weight: "10%",
       value: factors ? Math.round(factors.sourceAuthority * 100) : 50,
       display: "Neutral (50%)",
-      description: "Constant neutral 50% in MVP while citation source extraction is under development.",
+      description: "Constant neutral 50% in MVP while citation source extraction is in active development.",
     },
   ];
 

@@ -33,7 +33,7 @@ describe("calculateOpportunityScore", () => {
   });
 
   it("calculates correct score with all factors present", () => {
-    // 80 × 0.8 × 90 / 10000 = 5760 / 10000 = 0.576 → round(57.6) = 58
+    // 80 × 0.8 × 90 / 100 = 5760 / 100 = 57.6 → round(57.6) = 58
     const result = calculateOpportunityScore({
       demandScore: 80,
       competitiveGap: 0.8,
@@ -44,7 +44,7 @@ describe("calculateOpportunityScore", () => {
   });
 
   it("worked example from spec: demand 91, gap 0.92, relevance 95", () => {
-    // 91 × 0.92 × 95 / 10000 = 7955.4 / 10000 = 0.79554 → round(79.554) = 80
+    // 91 × 0.92 × 95 / 100 = 7955.4 / 100 = 79.554 → round(79.554) = 80
     const result = calculateOpportunityScore({
       demandScore: 91,
       competitiveGap: 0.92,

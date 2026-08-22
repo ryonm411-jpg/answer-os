@@ -40,7 +40,7 @@ describe("lib/recommendations/generator", () => {
     expect(comparisonRec).toBeDefined();
     expect(comparisonRec?.title).toContain("Xero Shoes vs Altra");
     expect(comparisonRec?.priority).toBe(1);
-    expect(comparisonRec?.estimatedImpact).toBeGreaterThan(10);
+    expect(comparisonRec?.estimatedImpact).toBeNull();
   });
 
   it("generates category FAQ recommendation when category mention rate is low", () => {
@@ -91,7 +91,7 @@ describe("lib/recommendations/generator", () => {
     const positioningRec = recs.find((r) => r.category === "Product Positioning");
     expect(positioningRec).toBeDefined();
     expect(positioningRec?.priority).toBe(2);
-    expect(positioningRec?.estimatedImpact).toBe(12);
+    expect(positioningRec?.estimatedImpact).toBeNull();
   });
 
   it("generates fallback schema recommendation when all prompts are 100% mentioned at rank #1", () => {

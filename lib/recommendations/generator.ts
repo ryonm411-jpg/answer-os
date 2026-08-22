@@ -13,7 +13,7 @@ export interface GeneratedRecommendation {
   description: string;
   category: string;
   priority: number; // 1 = High, 2 = Medium, 3 = Low
-  estimatedImpact: number; // e.g. 15 = +15% estimated visibility
+  estimatedImpact: number | null; // null: unsupported numeric percentage claims are eliminated (spec §13)
 }
 
 export interface CompanyAnalysisContext {
@@ -23,7 +23,7 @@ export interface CompanyAnalysisContext {
 
 /**
  * Analyzes completed scan result rows to generate actionable, prioritized recommendations.
- * Covers: missing comparison pages, weak category FAQ, missing pricing/docs, rank #2+ optimization, and schema markup.
+ * Grounded strictly in empirical ScanResult data without unsupported numeric impact claims.
  */
 export function generateRecommendations(
   context: CompanyAnalysisContext,
@@ -37,7 +37,7 @@ export function generateRecommendations(
         description: `All prompt checks returned provider errors. Verify that ${context.domain} allows search crawler access in robots.txt and has no active CAPTCHA blocks.`,
         category: "Indexing & Crawlability",
         priority: 1,
-        estimatedImpact: 20,
+        estimatedImpact: null,
       },
     ];
   }
@@ -61,8 +61,9 @@ export function generateRecommendations(
     for (const comp of r.competitorsMentioned) {
       if (comp.name && comp.name.trim().length > 0) {
         const cName = comp.name.trim();
-        // Ignore generic placeholder strings if any
-        if (cName.toLowerCase() !== "otherco") {
+        const lower = cName.toLowerCase();
+        // Ignore synthetic or placeholder names
+        if (lower !== "otherco" && lower !== "other company" && lower !== "unknown competitor") {
           competitorWins.set(cName, (competitorWins.get(cName) || 0) + 1);
         }
       }
@@ -76,13 +77,12 @@ export function generateRecommendations(
 
   // Generate top 2 comparison page recommendations for top winning competitors
   for (const [compName, winCount] of sortedCompetitors.slice(0, 2)) {
-    const impact = Math.min(25, 10 + winCount * 3);
     addRecommendation({
       title: `Create a dedicated ${context.companyName} vs ${compName} comparison page`,
-      description: `${compName} was cited in ${winCount} buyer search prompt(s) where ${context.companyName} was not recommended. Publishing a structured comparison page highlighting your key advantages will improve AI model indexing.`,
+      description: `${compName} was cited in ${winCount} tested prompt(s) where ${context.companyName} was not mentioned. Publishing a structured comparison page highlighting key differentiators will improve AI model indexing.`,
       category: "Comparison Pages",
       priority: 1,
-      estimatedImpact: impact,
+      estimatedImpact: null,
     });
   }
 
@@ -107,15 +107,12 @@ export function generateRecommendations(
   for (const [category, stats] of categoryStats.entries()) {
     const mentionRate = stats.mentioned / stats.total;
     if (mentionRate < 0.5 && stats.missed >= 1) {
-      const impact = Math.min(20, 8 + stats.missed * 2);
       addRecommendation({
         title: `Publish a comprehensive ${category} FAQ & Knowledge Base`,
-        description: `AI models recommend competitors in ${Math.round(
-          (1 - mentionRate) * 100
-        )}% of ${category} buyer queries. Adding structured FAQ schema and detailed documentation on ${context.domain} will help LLMs cite your official site.`,
+        description: `${context.companyName} was not mentioned in ${stats.missed} of ${stats.total} tested ${category} prompt(s). Adding structured FAQ schema and detailed documentation on ${context.domain} will help LLMs cite your official site.`,
         category: "FAQ & Schema",
         priority: stats.missed >= 2 || mentionRate === 0 ? 1 : 2,
-        estimatedImpact: impact,
+        estimatedImpact: null,
       });
     }
   }
@@ -131,7 +128,7 @@ export function generateRecommendations(
       description: `Your brand is mentioned in ${secondaryRankResults.length} prompt(s) but ranked behind competitors. Adding explicit feature comparison tables and customer proof points will push ${context.companyName} to the top #1 spot.`,
       category: "Product Positioning",
       priority: 2,
-      estimatedImpact: 12,
+      estimatedImpact: null,
     });
   }
 
@@ -142,7 +139,7 @@ export function generateRecommendations(
       description: `Your brand currently has strong AI visibility across tested prompts. Implement JSON-LD Organization and Product schema markup on ${context.domain} to lock in top AI search citations across future model updates.`,
       category: "Schema Markup",
       priority: 3,
-      estimatedImpact: 5,
+      estimatedImpact: null,
     });
   }
 
@@ -153,13 +150,10 @@ export function generateRecommendations(
       description: `LLMs rely heavily on transparent pricing structures and feature matrices when generating buyer recommendations. Ensure ${context.domain} includes accessible pricing details.`,
       category: "Pricing & Transparency",
       priority: 3,
-      estimatedImpact: 8,
+      estimatedImpact: null,
     });
   }
 
-  // Sort by priority ascending (1 highest), then estimatedImpact descending
-  return recommendations.sort((a, b) => {
-    if (a.priority !== b.priority) return a.priority - b.priority;
-    return b.estimatedImpact - a.estimatedImpact;
-  });
+  // Sort by priority ascending (1 highest)
+  return recommendations.sort((a, b) => a.priority - b.priority);
 }

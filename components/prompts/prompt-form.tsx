@@ -43,7 +43,12 @@ export function PromptForm({
   const [error, setError] = React.useState("");
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  React.useEffect(() => {
+  const [prevPrompt, setPrevPrompt] = React.useState(editingPrompt);
+  const [prevIsOpen, setPrevIsOpen] = React.useState(isOpen);
+
+  if (editingPrompt !== prevPrompt || isOpen !== prevIsOpen) {
+    setPrevPrompt(editingPrompt);
+    setPrevIsOpen(isOpen);
     if (editingPrompt) {
       setText(editingPrompt.text);
       setCategory(editingPrompt.category);
@@ -54,7 +59,7 @@ export function PromptForm({
       setIntent("PRODUCT");
     }
     setError("");
-  }, [editingPrompt, isOpen]);
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

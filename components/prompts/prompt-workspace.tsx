@@ -272,7 +272,7 @@ export function PromptWorkspace({
           </Select>
 
           {/* Sort By */}
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as "OPPORTUNITY" | "RELEVANCE" | "TEXT")}>
             <SelectTrigger className="h-9 w-[170px] text-xs">
               <ArrowUpDown className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
               <SelectValue placeholder="Sort Order" />

@@ -1,7 +1,7 @@
 import { getAvailableProviders } from "../providers/registry";
 import type { AIProvider } from "../providers/types";
 import { AIProviderError } from "../providers/errors";
-import { CURATED_PROMPTS, PROMPT_CATEGORIES, isKnownCategory, normalizePromptText } from "./curated";
+import { CURATED_PROMPTS, PROMPT_CATEGORIES, normalizePromptText } from "./curated";
 import { PromptGenerationError } from "./errors";
 import type { PromptIntent } from "./intent";
 import { isValidIntent, PROMPT_INTENTS } from "./intent";
@@ -74,7 +74,8 @@ export function parseSuggestions(content: string): PromptSuggestion[] {
 export function filterSuggestions(
   raw: Partial<PromptSuggestion>[],
   curatedTexts: Set<string>,
-  max: number = 20
+  max: number = 20,
+  fallbackCategory?: string
 ): PromptSuggestion[] {
   const cap = Math.min(Math.max(1, max), 50);
   const result: PromptSuggestion[] = [];
@@ -99,7 +100,13 @@ export function filterSuggestions(
 
     seenInBatch.add(normalized);
 
-    const category = item.category && isKnownCategory(item.category) ? item.category : "Other";
+    // Preserve the model's suggested category if non-empty, otherwise use profile category or fallback to "Other"
+    const category =
+      item.category && typeof item.category === "string" && item.category.trim().length > 0
+        ? item.category.trim()
+        : fallbackCategory && fallbackCategory.trim().length > 0
+        ? fallbackCategory.trim()
+        : "Other";
 
     // Fallback parser behavior per spec §6: PRODUCT used only when malformed intent can be recovered
     const intent: PromptIntent = isValidIntent(item.intent) ? item.intent : "PRODUCT";
@@ -225,5 +232,5 @@ Example JSON output format:
     CURATED_PROMPTS.map((p) => normalizePromptText(p.text))
   );
 
-  return filterSuggestions(rawParsed, curatedSet, input.count ?? 20);
+  return filterSuggestions(rawParsed, curatedSet, input.count ?? 20, input.businessProfile.category);
 }

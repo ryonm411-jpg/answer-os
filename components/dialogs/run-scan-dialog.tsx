@@ -24,20 +24,33 @@ export function RunScanDialog() {
   const [isFetchingCount, setIsFetchingCount] = React.useState(false);
 
   const isOpen = activeDialog === "run-scan";
+  const [prevIsOpen, setPrevIsOpen] = React.useState(isOpen);
 
-  React.useEffect(() => {
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
     if (isOpen) {
       setError("");
       setIsFetchingCount(true);
+    }
+  }
+
+  React.useEffect(() => {
+    if (isOpen) {
+      let isMounted = true;
       fetch("/api/prompts")
         .then((res) => res.json())
         .then((json) => {
-          if (json.data?.prompts) {
+          if (isMounted && json.data?.prompts) {
             setPromptCount(json.data.prompts.length);
           }
         })
         .catch(() => {})
-        .finally(() => setIsFetchingCount(false));
+        .finally(() => {
+          if (isMounted) setIsFetchingCount(false);
+        });
+      return () => {
+        isMounted = false;
+      };
     }
   }, [isOpen]);
 

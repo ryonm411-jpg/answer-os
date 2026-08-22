@@ -82,12 +82,19 @@ export function parseScanResponse(content: string): ParseResult {
       const comp = c as Record<string, unknown>;
       const name = typeof comp.name === "string" ? comp.name.trim() : "";
       if (!name) continue;
+
+      // Filter out synthetic/placeholder competitor labels per spec rule 9
+      const lowerName = name.toLowerCase();
+      if (lowerName === "otherco" || lowerName === "other company" || lowerName === "unknown competitor") {
+        continue;
+      }
+
       competitors.push({
         name,
         position: parsePosition(comp.position),
         sentiment: parseSentiment(comp.sentiment),
       });
-      if (competitors.length >= 10) break; // bounded, like the suggestion cap in 10
+      if (competitors.length >= 10) break; // bounded
     }
   }
 
