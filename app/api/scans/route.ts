@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { tasks } from "@trigger.dev/sdk";
 import { prisma } from "@/lib/db/prisma";
 import { getCompanyByClerkId } from "@/lib/db/companies";
+import { hasActiveSubscription } from "@/lib/db/subscriptions";
 import type { runScan } from "@/lib/jobs/scan";
 
 /**
@@ -24,6 +25,20 @@ export async function POST() {
     return NextResponse.json(
       { error: { message: "Company not found" } },
       { status: 404 }
+    );
+  }
+
+  // Server-side entitlement check (spec §12, Decision #9)
+  const isEntitled = await hasActiveSubscription(company.id);
+  if (!isEntitled) {
+    return NextResponse.json(
+      {
+        error: {
+          message:
+            "An active AnswerOS subscription is required for this action. Open Billing to subscribe or manage your plan.",
+        },
+      },
+      { status: 402 }
     );
   }
 

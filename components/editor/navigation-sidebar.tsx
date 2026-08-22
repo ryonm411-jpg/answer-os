@@ -9,6 +9,7 @@ import {
   Globe,
   History,
   BarChart3,
+  CreditCard,
   Settings,
   Plus,
 } from "lucide-react";
@@ -30,6 +31,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { name: "Dashboard", icon: LayoutDashboard, href: "/editor" },
   { name: "Prompts", icon: HelpCircle, href: "/prompts" },
+  { name: "Billing", icon: CreditCard, href: "/billing" },
   { name: "Domains", icon: Globe, href: "#" },
   { name: "Scan History", icon: History, href: "#" },
   { name: "Reports", icon: BarChart3, href: "#" },

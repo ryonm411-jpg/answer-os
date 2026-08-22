@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- Set up Stripe subscriptions & payments integration for single flat monthly pricing
+- Implement weekly email reports via Resend
 
 ## Completed
 
@@ -44,6 +44,16 @@ Update this file after every meaningful implementation change.
   8. Refactored recommendation engine (`lib/recommendations/generator.ts`) to be strictly evidence-based from empirical `ScanResult` rows, eliminating unsupported numeric percentage impact claims (`estimatedImpact: null`).
   9. Added `coverageRate` provider confidence tracking to dashboard read model (`lib/db/dashboard.ts`).
   10. Verified Prisma schema (`npx prisma validate`), client generation (`npx prisma generate`), and full unit test suite (83 unit tests passing across 15 test files).
+- Implemented Stripe Subscriptions & Payments (`context/features-specs/16-stripe-subscriptions.md`):
+  1. Installed `stripe` server SDK dependency.
+  2. Added `SubscriptionStatus` enum, `Subscription` model, and `StripeWebhookEvent` model to `prisma/schema.prisma` and applied database migration `20260822055948_add_stripe_subscription`.
+  3. Built server-only Stripe module (`lib/stripe/server.ts`) for lazy client initialization, status mapping, subscription normalization, deterministic entitlement checks, and safe billing status serialization.
+  4. Built database helper module (`lib/db/subscriptions.ts`) for subscription queries and atomic, idempotent webhook updates using database transactions.
+  5. Created REST API endpoints: `POST /api/billing/checkout` (Stripe Checkout sessions), `POST /api/billing/portal` (Stripe Customer Portal sessions), `GET /api/billing/subscription` (PostgreSQL read model), and `POST /api/webhooks/stripe` (signature verification & event handler).
+  6. Enforced server-side entitlement checks (`402 Payment Required`) on resource-consuming actions: `POST /api/scans` and `POST /api/prompts/generate`.
+  7. Created client API fetch helpers (`lib/api/billing.ts`) and billing presentation UI suite (`components/billing/billing-status-badge.tsx`, `components/billing/subscription-card.tsx`, `components/billing/billing-page.tsx`, and `app/(editor)/billing/page.tsx`).
+  8. Added Billing navigation link with `CreditCard` icon to the editor sidebar (`components/editor/navigation-sidebar.tsx`).
+  9. Added co-located Vitest unit tests (`lib/stripe/server.test.ts`) and verified full test suite (93 unit tests passing across 16 test files).
 
 ## In Progress
 
@@ -51,10 +61,9 @@ Update this file after every meaningful implementation change.
 
 ## Next Up
 
-1. Set up Stripe subscriptions
-2. Implement weekly email reports via Resend
-3. Add PostHog analytics and Sentry monitoring
-4. Deploy to Vercel production
+1. Implement weekly email reports via Resend
+2. Add PostHog analytics and Sentry monitoring
+3. Deploy to Vercel production
 
 ## Open Questions
 
@@ -123,3 +132,4 @@ Update this file after every meaningful implementation change.
 - Product direction updated (2026-08-21): Added `15-prompt-opportunity-and-management.md` as the next implementation unit. The prompt library now has a defined review-before-scan workflow, user-created prompt lifecycle, intent taxonomy, and Opportunity Score model; implementation is intentionally not included in this documentation task.
 - Product reference clarified (2026-08-21): Peec's Suggested Prompts is the conceptual interaction reference for scannable prompt cards, intent grouping, opportunity ordering, and prompt review. The spec explicitly requires an AnswerOS-specific implementation without copying Peec branding or proprietary UI.
 - Spec refinement (2026-08-21): Corrected the `15-prompt-opportunity-and-management.md` Opportunity Score normalization ranges (demand/relevance `0..100`, gap `0..1`), added the missing `intent` field to the migration list, clarified `searchVolume`→demand normalization, and added a `Business Profile Requirement` section that makes prompt generation require a business profile (`BusinessProfile { productDescription, category }` on `GeneratePromptSuggestionsInput`, `422` on a missing profile).
+- Wrote Stripe Subscriptions & Payments spec (2026-08-21): Created `16-stripe-subscriptions.md` with the mandatory first-read of `CLAUDE.md`, single hosted Checkout flow, company-scoped subscription schema, idempotent signature-verified webhook processing, Customer Portal flow, server-side entitlement checks, billing UI states, Stripe test-mode setup, validation checklist, and explicit MVP out-of-scope boundaries. The spec records the current company-first onboarding sequence and keeps the exact monthly price as an open product decision.

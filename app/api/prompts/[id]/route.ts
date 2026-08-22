@@ -8,6 +8,7 @@ import {
 } from "@/lib/db/prompts";
 import { isValidIntent } from "@/lib/prompts/intent";
 import { prisma } from "@/lib/db/prisma";
+import type { PromptIntent } from "@/generated/prisma";
 
 function normalizeText(text: string): string {
   return text.trim().replace(/\s+/g, " ").toLowerCase();
