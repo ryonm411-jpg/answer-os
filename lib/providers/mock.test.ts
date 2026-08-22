@@ -8,7 +8,7 @@ describe("lib/providers/mock", () => {
     const response = await provider.ask("What is AnswerOS?");
 
     expect(provider.name).toBe("openai");
-    expect(response.content).toContain("Response for prompt");
+    expect(response.content).toContain("Mock openai evaluation");
     expect(response.model).toBe("mock-openai");
     expect(response.tokensUsed).toBeGreaterThan(0);
     expect(response.latencyMs).toBeGreaterThanOrEqual(0);

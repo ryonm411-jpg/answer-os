@@ -16,6 +16,9 @@ const envKeyNames: Record<AIProviderName, string> = {
 };
 
 export function isProviderConfigured(name: AIProviderName): boolean {
+  if (process.env.USE_MOCK_PROVIDERS === "true") {
+    return true;
+  }
   switch (name) {
     case "openai":
       return isOpenAIConfigured();
@@ -31,6 +34,13 @@ export function isProviderConfigured(name: AIProviderName): boolean {
 }
 
 export function getProvider(name: AIProviderName): AIProvider {
+  if (process.env.USE_MOCK_PROVIDERS === "true") {
+    if (!providerInstances[name]) {
+      providerInstances[name] = new MockProvider(name);
+    }
+    return providerInstances[name]!;
+  }
+
   if (!isProviderConfigured(name)) {
     const envVar = envKeyNames[name];
     throw new AIProviderError(

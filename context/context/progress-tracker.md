@@ -8,7 +8,7 @@ Update this file after every meaningful implementation change.
 
 ## Current Goal
 
-- Build the dashboard UI
+- Implement prompt opportunity ranking and pre-scan prompt management
 
 ## Completed
 
@@ -31,19 +31,20 @@ Update this file after every meaningful implementation change.
 - Implemented Prompt Library (`context/features-specs/10-prompt-library.md`): Extended `Prompt` model with nullable `companyId` and `PromptSource` enum (`20260808020508_add_prompt_source_and_company`), built curated prompt library (`lib/prompts/curated.ts`) with 100 buyer question prompts across 11 categories, configured `prisma/seed.ts` with `tsx` runner for idempotent seeding, created thin Prisma helpers in `lib/db/prompts.ts`, implemented AI prompt suggestion generator (`lib/prompts/generator.ts`) via `lib/providers/` with JSON parsing, deduplication, curated catalog filtering, and `PromptGenerationError`, exposed `GET /api/prompts` and `POST /api/prompts/generate` REST endpoints, wired non-blocking onboarding kickoff, and added Vitest unit test suites.
 - Implemented Trigger.dev Background Jobs (`context/features-specs/11-trigger-dev-jobs.md`): Updated `trigger.config.ts` with non-deprecated `@trigger.dev/sdk` import, `./lib/jobs` task directory, and `prismaExtension({ mode: "modern" })` from `@trigger.dev/build/extensions/prisma`. Removed `src/trigger/` CLI scaffold. Built `lib/jobs/scan.ts` defining `runScan` background task (`id: "scan-company"`) with lifecycle management (`RUNNING` → `COMPLETED`/`FAILED`) and per-provider/prompt scanner loop stub. Created `POST /api/scans` endpoint with Clerk auth, single-active-scan guard (409), type-only task trigger, and status response envelope. Built client helper `lib/api/scans.ts` and updated `RunScanDialog` to trigger real scans with inline error handling. Added `"trigger:dev"` script to `package.json`.
 - Implemented Visibility Score Algorithm (`context/features-specs/13-visibility-score.md`): Built pure `lib/scoring/` modules (`weights.ts` with 30/25/20/15/10 weight constants and total sum assertion, `calculator.ts` with `ScoreResultRow`/`VisibilityFactors`/`ScoreSummary`/`ScoredScan` types, per-factor score formulas, error row exclusion, zero-valid-row `score: null` handling, clamping 0–100 and rounding) and thin server-side Prisma orchestrator in `lib/db/scoring.ts` (`getLatestCompletedScan`, `getCompanyScore`). Added co-located Vitest test suites (`weights.test.ts`, `calculator.test.ts`) covering factor math, edge cases, worked example (64), contrast cases (13, 5), and perfect ceiling (95).
-- Wrote Dashboard UI context (`context/features-specs/14-dashboard-ui.md`): Defined the server-first dashboard data contract and component boundaries, score/factor/mentions/trend/prompt/competitor/recommendation panels, all empty/loading/error states, responsive and accessible behavior, dependency-free SVG/CSS chart guidance, and the rule to display competitor mentions rather than unsupported competitor scores. The spec begins with a mandatory `CLAUDE.md` read and keeps score calculation server-side.
+- Implemented Dashboard UI (`context/features-specs/14-dashboard-ui.md`): Built server-first dashboard data aggregation helpers (`lib/db/dashboard.ts`) and serializable `DashboardData` view model contract, component presentation suite under `components/dashboard/` (`dashboard-header.tsx`, `visibility-score-card.tsx`, `score-factor-breakdown.tsx`, `mentions-overview.tsx`, `trend-graph.tsx`, `prompt-performance.tsx`, `competitor-mentions.tsx`, `recommendations-list.tsx`, `dashboard-content.tsx`), route-level skeleton loading (`app/(editor)/editor/loading.tsx`), server component composition in `app/(editor)/editor/page.tsx`, and co-located Vitest test suite (`lib/db/dashboard.test.ts`). Supported empty, no-scan, active-scan, errored, and completed scan states with accessible SVG trend visualization and honest 95 MVP ceiling presentation.
+- Implemented Post-Scan Actionable Recommendation Generator Engine (Goal #5): Built pure, DB-decoupled recommendation generator engine in `lib/recommendations/generator.ts` with multi-factor rule analysis (missing comparison landing pages, weak category FAQ & schema, rank #2+ product positioning, and schema markup), co-located Vitest unit test suite in `lib/recommendations/generator.test.ts` (68 unit tests passing), database access helper in `lib/db/recommendations.ts` (`saveScanRecommendations`), and automatic execution wiring inside the Trigger.dev `runScan` task (`lib/jobs/scan.ts`) upon scan completion.
+- Implemented Prompt Opportunity Ranking & Management (`context/features-specs/15-prompt-opportunity-and-management.md`): Added `PromptIntent` enum (7 intent types), `USER_CUSTOM` source, `demandScore`, `businessRelevance`, `archivedAt`, and `Company.productDescription` to Prisma schema. Built pure `lib/scoring/opportunity.ts` calculator and `lib/prompts/intent.ts` taxonomy. Updated `lib/prompts/generator.ts` to require Business Profile and produce intent-grounded suggestions. Refactored `lib/db/prompts.ts` to additive generation and archive semantics. Created per-prompt competitive gap helper in `lib/db/competitive-gap.ts`. Implemented REST endpoints (`GET` enriched prompts, `POST` custom prompt, `PATCH`/`DELETE` prompt by ID, `POST` generate with 422 Business Profile guard, `PATCH` company profile, and `POST` scan 0-prompt guard). Created UI suite under `components/prompts/` (`PromptWorkspace`, `PromptCardGrid`, `PromptCard`, `PromptForm`, `PromptSourceBadge`, `PromptScoreBadge`, `PromptGenerationActions`) and server page at `app/(editor)/prompts/page.tsx`. All 79 unit tests pass.
 
 ## In Progress
 
-- None yet.
+- None.
 
 ## Next Up
 
-1. Build the dashboard UI
-2. Set up Stripe subscriptions
-3. Implement weekly email reports via Resend
-4. Add PostHog analytics and Sentry monitoring
-5. Deploy to Vercel production
+1. Set up Stripe subscriptions
+2. Implement weekly email reports via Resend
+3. Add PostHog analytics and Sentry monitoring
+4. Deploy to Vercel production
 
 ## Open Questions
 
@@ -81,6 +82,8 @@ Update this file after every meaningful implementation change.
 | 2026-08-16 | Pipeline logic in `lib/scan/` pure modules + Upstash Redis cache-before-persist | Keeps core logic unit-testable and thin, satisfies Invariant #3, saves AI provider spend on re-scans |
 | 2026-08-16 | Bounded retry for retryable provider errors + error row recording       | Prevents transient rate limits from failing scans while isolating failed checks for accurate visibility scoring |
 | 2026-08-19 | Visibility score: pure `lib/scoring/` calculator + thin `lib/db/scoring.ts` orchestrator, error rows excluded, latest COMPLETED scan read from Postgres, competitor share from `competitorsMentioned`, source authority constant-neutral 0.5 (user decision) | Keeps scoring unit-testable and server-only (invariant #4) while staying honest about data the pipeline doesn't capture yet |
+| 2026-08-20 | Dashboard UI: server-first `getDashboardData(companyId)` DB read model, pure SVG trend graph, honest 95 ceiling copy, competitor mention counts/share presentation, thin component boundaries under `components/dashboard/` | Preserves invariant #4 (server-computed score), avoids client API hops, keeps UI lightweight without charting libraries |
+| 2026-08-21 | Prompt Opportunity Score and Prompt Workspace: separate buyer intent from business category, rank by normalized Search/AI Demand × Competitive Gap × Business Relevance, show prompts before scanning, and archive company-owned deletes | Makes the scan set reviewable and prioritizes prompts without destroying historical ScanResult rows; curated prompts remain immutable and pre-scan scores are clearly estimated |
 
 ## Session Notes
 
@@ -106,7 +109,7 @@ Update this file after every meaningful implementation change.
 - Wrote Visibility Score spec (2026-08-19): Created `13-visibility-score.md` (tracker Next Up #1). Pure Prisma-free calculator in `lib/scoring/` (`weights.ts` constants matching the documented 30/25/20/15/10 table + `calculator.ts` with per-factor formulas, worked example → 64, and the 95 honest ceiling) orchestrated by a thin server-only `lib/db/scoring.ts` (`getLatestCompletedScan` + `getCompanyScore`) that reads the latest COMPLETED scan from Postgres and maps rows with error rows excluded. User decisions captured: source authority stays a constant-neutral 0.5 with the 10% weight intact (pipeline captures no citation data yet; 100 unreachable until real source data lands), competitor share computed from `competitorsMentioned` (not the `Competitor` table). No new deps, env vars, or schema changes; co-located Vitest suites specified. Spec opens with the mandatory `CLAUDE.md` read (the repo's agent-instruction entry point, `@`-importing `AGENTS.md`).
 - Completed Visibility Score implementation (2026-08-19): Implemented pure scoring engine (`lib/scoring/weights.ts`, `lib/scoring/calculator.ts`) and Prisma orchestrator (`lib/db/scoring.ts`). Added co-located Vitest suites (`weights.test.ts`, `calculator.test.ts`). Verified error row filtering, edge cases (0 valid rows → `score: null`), competitor presence calculation, clamping/rounding, worked example math (64), and perfect ceiling (95). All tests and build verified clean.
 - Wrote Dashboard UI context (2026-08-19): Created `14-dashboard-ui.md` for the next implementation unit. It requires reading `CLAUDE.md` first, keeps the initial page server-first with no visibility API route, defines the serialized dashboard read model and thin `lib/db/` helpers, covers score/history/prompt/competitor/recommendation presentation, and specifies intentional no-company, no-scan, running, partial-error, all-error, loading, and read-failure states.
-
-
-
-
+- Completed Dashboard UI implementation (2026-08-20): Implemented spec `14-dashboard-ui.md` end-to-end. Built thin server DB read model in `lib/db/dashboard.ts` with full Date serialization, created unit tests in `lib/db/dashboard.test.ts`, created full presentation component suite under `components/dashboard/`, wired `app/(editor)/editor/page.tsx` as a Server Component passing data to `DashboardContent`, and added `app/(editor)/editor/loading.tsx` route loading skeletons.
+- Product direction updated (2026-08-21): Added `15-prompt-opportunity-and-management.md` as the next implementation unit. The prompt library now has a defined review-before-scan workflow, user-created prompt lifecycle, intent taxonomy, and Opportunity Score model; implementation is intentionally not included in this documentation task.
+- Product reference clarified (2026-08-21): Peec's Suggested Prompts is the conceptual interaction reference for scannable prompt cards, intent grouping, opportunity ordering, and prompt review. The spec explicitly requires an AnswerOS-specific implementation without copying Peec branding or proprietary UI.
+- Spec refinement (2026-08-21): Corrected the `15-prompt-opportunity-and-management.md` Opportunity Score normalization ranges (demand/relevance `0..100`, gap `0..1`), added the missing `intent` field to the migration list, clarified `searchVolume`→demand normalization, and added a `Business Profile Requirement` section that makes prompt generation require a business profile (`BusinessProfile { productDescription, category }` on `GeneratePromptSuggestionsInput`, `422` on a missing profile).

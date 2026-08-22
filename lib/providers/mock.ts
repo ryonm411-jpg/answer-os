@@ -18,7 +18,13 @@ export class MockProvider implements AIProvider {
 
     const content =
       this.overrides?.content ??
-      `[Mock ${this.name}] Response for prompt: "${prompt.slice(0, 30)}..."`;
+      JSON.stringify({
+        mentioned: true,
+        position: 1,
+        sentiment: "POSITIVE",
+        reasoning: `Mock ${this.name} evaluation for prompt: "${prompt.slice(0, 30)}..."`,
+        competitorsMentioned: [{ name: "Salesforce" }, { name: "HubSpot" }],
+      });
     const model = this.overrides?.model ?? `mock-${this.name}`;
     const tokensUsed =
       this.overrides?.tokensUsed ?? Math.max(10, Math.ceil(prompt.length / 4));

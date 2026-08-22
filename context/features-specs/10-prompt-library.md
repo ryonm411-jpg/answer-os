@@ -7,13 +7,13 @@ Build the prompt library — the set of questions AnswerOS scans across the four
 1. **Curated library** — ~100 hand-seeded prompts organized by industry/category, stored as a global catalog in the `Prompt` table and seeded by `prisma/seed.ts`.
 2. **AI suggestions** — per-company prompts generated from the user's domain, industry, and competitors, produced by `lib/prompts/generator.ts` through the `lib/providers/` abstraction layer.
 
-Expose both through a thin API surface (`GET /api/prompts`, `POST /api/prompts/generate`) so the scan job and the dashboard can read the effective prompt set for a company, and kick off generation from onboarding after domain entry.
+Expose both through a thin API surface (`GET /api/prompts`, `POST /api/prompts/generate`) so the scan job and the dashboard can read the effective prompt set for a company, and kick off generation from onboarding after domain entry. Prompt review, Opportunity Score ranking, user-created prompts, and prompt CRUD are defined in the follow-on `15-prompt-opportunity-and-management.md` spec.
 
 Do **not** implement:
 
 - the scan job / scan pipeline (a future spec reads prompts via `getPromptsForCompany`)
 - the dashboard UI — "top/missing prompts", prompt lists, or regenerate buttons (dashboard spec)
-- user-custom prompts or per-prompt management (Phase 2)
+- prompt opportunity ranking and user-custom prompt management (see `15-prompt-opportunity-and-management.md`)
 - Trigger.dev background jobs — generation is a single, short `ask()` call and runs synchronously in the route
 
 Follow:
@@ -413,7 +413,7 @@ Do not implement:
 Reserved extensions (do not implement):
 
 - regenerate trigger in the editor/dashboard UI (dashboard spec)
-- user-custom prompts and per-category toggling (Phase 2, `answeros-spec.md`)
+- prompt opportunity ranking and per-prompt management (follow-on spec `15-prompt-opportunity-and-management.md`)
 - catalog expansion across more industries/categories
 - `count` and provider selection surfaced as request options
 - generation via background job when counts grow

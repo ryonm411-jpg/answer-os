@@ -6,7 +6,7 @@ export interface ScanPromptInput {
 
 export function buildScanPrompt({ question, companyName, companyDomain }: ScanPromptInput): string {
   return [
-    `You are answering a question from someone choosing software.`,
+    `You are answering a buyer request for product or service recommendations.`,
     ``,
     `Question: "${question}"`,
     ``,

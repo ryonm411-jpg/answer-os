@@ -53,6 +53,22 @@ export async function POST() {
     );
   }
 
+  // Load effective prompt set and reject if 0 prompts exist (spec §22.6, Invariant #13)
+  const effectivePrompts = await prisma.prompt.findMany({
+    where: {
+      archivedAt: null,
+      OR: [{ companyId: null }, { companyId: company.id }],
+    },
+    select: { id: true },
+  });
+
+  if (effectivePrompts.length === 0) {
+    return NextResponse.json(
+      { error: { message: "Cannot start a scan with 0 active prompts. Please add or activate at least one prompt." } },
+      { status: 422 }
+    );
+  }
+
   const scan = await prisma.scan.create({
     data: {
       companyId: company.id,

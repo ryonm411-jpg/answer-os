@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import {
   X,
   LayoutDashboard,
+  HelpCircle,
   Globe,
   History,
   BarChart3,
@@ -23,11 +25,11 @@ interface NavItem {
   name: string;
   icon: React.ElementType;
   href: string;
-  active?: boolean;
 }
 
 const navItems: NavItem[] = [
-  { name: "Dashboard", icon: LayoutDashboard, href: "#", active: true },
+  { name: "Dashboard", icon: LayoutDashboard, href: "/editor" },
+  { name: "Prompts", icon: HelpCircle, href: "/prompts" },
   { name: "Domains", icon: Globe, href: "#" },
   { name: "Scan History", icon: History, href: "#" },
   { name: "Reports", icon: BarChart3, href: "#" },
@@ -36,6 +38,7 @@ const navItems: NavItem[] = [
 
 export function NavigationSidebar({ isOpen, onClose }: NavigationSidebarProps) {
   const { openDialog } = useDialogs();
+  const pathname = usePathname();
 
   // Listen for Escape key to close the sidebar
   React.useEffect(() => {
@@ -104,25 +107,28 @@ export function NavigationSidebar({ isOpen, onClose }: NavigationSidebarProps) {
         <nav className="flex-1 space-y-1 p-3 overflow-y-auto">
           {navItems.map((item) => {
             const Icon = item.icon;
+            const isActive = pathname === item.href;
             return (
               <a
                 key={item.name}
                 href={item.href}
                 onClick={(e) => {
-                  if (!item.active) {
+                  if (item.href === "#") {
                     e.preventDefault();
+                  } else {
+                    onClose();
                   }
                 }}
                 className={cn(
                   "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                  item.active
+                  isActive
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />
                 <span>{item.name}</span>
-                {item.active && (
+                {isActive && (
                   <span className="ml-auto text-[10px] uppercase font-semibold tracking-wider opacity-80">
                     Active
                   </span>

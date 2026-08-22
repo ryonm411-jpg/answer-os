@@ -79,3 +79,25 @@ export async function updateCompanyDomain(companyId: string, domain: string) {
 export async function deleteCompany(companyId: string) {
   return prisma.company.delete({ where: { id: companyId } });
 }
+
+/**
+ * Update the Business Profile fields used by prompt generation (spec §7).
+ *
+ * `productDescription` is required for prompt generation to proceed.
+ * `industry` is optional context used alongside productDescription.
+ */
+export async function updateCompanyProfile(
+  companyId: string,
+  profile: {
+    productDescription: string;
+    industry?: string | null;
+  }
+) {
+  return prisma.company.update({
+    where: { id: companyId },
+    data: {
+      productDescription: profile.productDescription.trim(),
+      industry: profile.industry !== undefined ? profile.industry : undefined,
+    },
+  });
+}

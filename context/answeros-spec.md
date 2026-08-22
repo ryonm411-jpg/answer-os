@@ -44,8 +44,8 @@ A B2B SaaS company enters their domain, and AnswerOS automatically scans hundred
 3. **Stripe checkout** — User subscribes to the single monthly plan via Stripe checkout
 4. **Onboarding** — User enters their company domain (e.g., `openai.com`). System validates the domain
 5. **Competitor entry** — User optionally enters 2-5 competitor domains (e.g., `shopify.com`, `squarespace.com`). System auto-discovers additional competitors from AI responses
-6. **Prompt library** — System generates an initial set of prompts based on industry templates + AI suggestions tailored to the user's domain
-7. **First scan** — Background job (Trigger.dev) queues the scan. System runs each prompt through 4 AI providers, captures mentions, rank, sentiment, and competitor presence
+6. **Prompt workspace** — System generates an initial set of prompts based on industry templates + AI suggestions tailored to the user's domain. The user reviews the visible prompt set, adds their own prompts, and can edit or remove company-owned prompts before scanning.
+7. **First scan** — Background job (Trigger.dev) queues the scan after prompt review. System runs each active prompt through 4 AI providers, captures mentions, rank, sentiment, and competitor presence
 8. **Dashboard** — User sees their visibility score, mention count, competitor comparison chart, top/missing prompts, and prioritized recommendations
 9. **Weekly report** — Every Monday, Trigger.dev re-runs the scan and Resend emails a summary: score change, new mentions, top recommendations
 10. **Ongoing** — User returns to the dashboard to track trends, run on-demand scans, and act on new recommendations
@@ -70,6 +70,8 @@ A B2B SaaS company enters their domain, and AnswerOS automatically scans hundred
 #### Visibility Scanner
 - Curated prompt library: ~100 hand-seeded prompts organized by industry/category
 - AI-generated prompt suggestions tailored to the user's domain
+- Prompt workspace: visible pre-scan review, seven buyer-intent types, user-created prompts, and edit/archive controls for company-owned prompts
+- Opportunity Score ranking: Search/AI Demand × Competitive Gap × Business Relevance, with estimated versus measured labeling
 - Scan execution across 4 providers: OpenAI, Anthropic/Claude, Google Gemini, Perplexity
 - All scans run asynchronously via Trigger.dev background jobs
 - Results cached in Upstash Redis with configurable TTL (MVP default: 24 hours; post-MVP: per-plan configurable)
@@ -123,7 +125,7 @@ A B2B SaaS company enters their domain, and AnswerOS automatically scans hundred
 
 - Content generation (FAQ pages, blog posts, landing pages, comparison pages, documentation, schema, meta tags)
 - Competitor intelligence (deeper tracking: wins, losses, trends over time)
-- Prompt library expansion and user-custom prompts
+- Prompt library expansion and advanced prompt versioning
 
 ### Phase 3+ — Future
 
@@ -146,6 +148,8 @@ A B2B SaaS company enters their domain, and AnswerOS automatically scans hundred
 - Company/domain onboarding with validation
 - Competitor entry + auto-discovery
 - Prompt library (100+ curated prompts + AI-generated suggestions)
+- Pre-scan prompt review and company-owned prompt add/edit/archive management
+- Opportunity Score ranking for prompt prioritization
 - AI prompt scanning across 4 providers (OpenAI, Anthropic, Gemini, Perplexity)
 - Async scanning via Trigger.dev
 - Redis-cached results via Upstash

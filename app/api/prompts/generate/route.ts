@@ -1,14 +1,14 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getCompanyByClerkId } from "@/lib/db/companies";
-import { replaceCompanySuggestions } from "@/lib/db/prompts";
+import { addNewAiSuggestions } from "@/lib/db/prompts";
 import { prisma } from "@/lib/db/prisma";
 
 import { generatePromptSuggestions } from "@/lib/prompts/generator";
 import { PromptGenerationError } from "@/lib/prompts/errors";
 import { AIProviderError } from "@/lib/providers/errors";
 
-export async function POST() {
+export async function POST(req: Request) {
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json(
@@ -25,6 +25,52 @@ export async function POST() {
     );
   }
 
+  // Refuse generation while scan is active
+  const activeScan = await prisma.scan.findFirst({
+    where: {
+      companyId: company.id,
+      status: { in: ["PENDING", "RUNNING"] },
+    },
+  });
+  if (activeScan) {
+    return NextResponse.json(
+      { error: { message: "Cannot generate prompts while a scan is in progress" } },
+      { status: 409 }
+    );
+  }
+
+  // Parse optional body for temporary profile override or fallback to stored profile
+  let bodyProductDescription: string | undefined;
+  let bodyCategory: string | undefined;
+  try {
+    const body = await req.json();
+    if (typeof body?.productDescription === "string") {
+      bodyProductDescription = body.productDescription;
+    }
+    if (typeof body?.category === "string") {
+      bodyCategory = body.category;
+    }
+  } catch {
+    // Body is optional if stored profile exists
+  }
+
+  const productDescription =
+    bodyProductDescription?.trim() || company.productDescription?.trim();
+  const category = bodyCategory?.trim() || company.industry?.trim() || "General";
+
+  // Grounding requirement: productDescription is MANDATORY (spec §7, §22.5, Invariant #14)
+  if (!productDescription) {
+    return NextResponse.json(
+      {
+        error: {
+          message:
+            "Business Profile productDescription is required before generating prompts. Please provide a brief description of what your company sells.",
+        },
+      },
+      { status: 422 }
+    );
+  }
+
   const competitors = await prisma.competitor.findMany({
     where: { companyId: company.id },
     select: { name: true, domain: true },
@@ -35,10 +81,15 @@ export async function POST() {
       companyName: company.name,
       domain: company.domain,
       industry: company.industry,
+      businessProfile: {
+        productDescription,
+        category,
+      },
       competitors,
     });
 
-    const result = await replaceCompanySuggestions(company.id, suggestions);
+    // Additive generation per spec §8 & §22.5: skips duplicates, preserves user edits
+    const result = await addNewAiSuggestions(company.id, suggestions);
 
     return NextResponse.json({
       data: {

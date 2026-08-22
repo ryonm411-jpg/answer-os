@@ -30,6 +30,17 @@ enum Sentiment {
 enum PromptSource {
   CURATED
   AI_SUGGESTED
+  USER_CUSTOM
+}
+
+enum PromptIntent {
+  COMMERCIAL
+  COMPARISON
+  PROBLEM
+  PRODUCT
+  BRAND
+  ALTERNATIVE
+  PURCHASE_INTENT
 }
 
 model User {
@@ -43,18 +54,19 @@ model User {
 }
 
 model Company {
-  id              String           @id @default(cuid())
-  userId          String           @unique
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name            String
-  domain          String           @unique
-  industry        String?
-  competitors     Competitor[]
-  prompts         Prompt[]
-  scans           Scan[]
-  recommendations Recommendation[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  id                 String           @id @default(cuid())
+  userId             String           @unique
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  domain             String           @unique
+  industry           String?
+  productDescription String?
+  competitors        Competitor[]
+  prompts            Prompt[]
+  scans              Scan[]
+  recommendations    Recommendation[]
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 }
 
 model Scan {
@@ -91,18 +103,25 @@ model ScanResult {
 }
 
 model Prompt {
-  id           String       @id @default(cuid())
-  companyId    String?
-  company      Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  source       PromptSource @default(CURATED)
-  text         String
-  category     String
-  searchVolume Int?
-  results      ScanResult[]
-  createdAt    DateTime     @default(now())
+  id                String       @id @default(cuid())
+  companyId         String?
+  company           Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  source            PromptSource @default(CURATED)
+  intent            PromptIntent @default(PRODUCT)
+  text              String
+  category          String
+  searchVolume      Int?
+  demandScore       Int?
+  businessRelevance Int?
+  archivedAt        DateTime?
+  results           ScanResult[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @default(now()) @updatedAt
 
   @@index([companyId])
   @@index([category])
+  @@index([intent])
+  @@index([archivedAt])
 }
 
 model Competitor {

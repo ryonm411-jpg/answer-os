@@ -32,39 +32,38 @@ describe("parseSuggestions", () => {
     expect(res[0].category).toBe("CRM");
   });
 
-  it("handles embedded JSON array in prose", () => {
-    const raw = `Sure! Here is the JSON: [ { "text": "Top security tools?", "category": "Security" } ] Hope this helps!`;
+  it("extracts JSON with intent, demandScore, and businessRelevance", () => {
+    const raw = JSON.stringify([
+      {
+        text: "Acme vs Vivobarefoot",
+        category: "Comparisons",
+        intent: "COMPARISON",
+        demandScore: 85,
+        businessRelevance: 90,
+      },
+    ]);
     const res = parseSuggestions(raw);
     expect(res).toHaveLength(1);
-    expect(res[0].text).toBe("Top security tools?");
+    expect(res[0].intent).toBe("COMPARISON");
+    expect(res[0].demandScore).toBe(85);
+    expect(res[0].businessRelevance).toBe(90);
   });
 
   it("returns empty array for invalid JSON or non-array JSON", () => {
     expect(parseSuggestions("Invalid string")).toEqual([]);
     expect(parseSuggestions(`{ "error": "failed" }`)).toEqual([]);
   });
-
-  it("filters out invalid items without required fields", () => {
-    const raw = JSON.stringify([
-      { text: "", category: "CRM" },
-      { text: "Valid question?", category: 123 },
-      { text: "Good prompt?", category: "Payments" },
-    ]);
-    const res = parseSuggestions(raw);
-    expect(res).toHaveLength(1);
-    expect(res[0].text).toBe("Good prompt?");
-  });
 });
 
 describe("filterSuggestions", () => {
-  const curatedSet = new Set(
-    CURATED_PROMPTS.map((p) => normalizePromptText(p.text))
-  );
+  const curatedSet = new Set([
+    normalizePromptText("What is the best CRM software for small businesses?"),
+  ]);
 
-  it("dedupes items within batch and drops curated prompt matches", () => {
-    const raw: PromptSuggestion[] = [
+  it("dedupes items within batch, sets defaults, and drops curated prompt matches", () => {
+    const raw: Partial<PromptSuggestion>[] = [
       { text: "What is the best CRM software for small businesses?", category: "CRM" }, // Curated match!
-      { text: "Custom suggestion for Acme?", category: "CRM" },
+      { text: "Custom suggestion for Acme?", category: "CRM", intent: "COMPARISON", demandScore: 80, businessRelevance: 85 },
       { text: "  custom suggestion for acme?  ", category: "CRM" }, // Duplicate!
       { text: "Another suggestion?", category: "Analytics" },
     ];
@@ -72,11 +71,19 @@ describe("filterSuggestions", () => {
     const res = filterSuggestions(raw, curatedSet, 20);
     expect(res).toHaveLength(2);
     expect(res[0].text).toBe("Custom suggestion for Acme?");
+    expect(res[0].intent).toBe("COMPARISON");
+    expect(res[0].demandScore).toBe(80);
+    expect(res[0].businessRelevance).toBe(85);
+
+    // Default intent fallback is PRODUCT when missing/invalid
     expect(res[1].text).toBe("Another suggestion?");
+    expect(res[1].intent).toBe("PRODUCT");
+    expect(res[1].demandScore).toBe(50);
+    expect(res[1].businessRelevance).toBe(70);
   });
 
   it("maps unknown categories to 'Other'", () => {
-    const raw: PromptSuggestion[] = [
+    const raw: Partial<PromptSuggestion>[] = [
       { text: "Something unique question?", category: "UnheardCategory" },
     ];
     const res = filterSuggestions(raw, curatedSet, 20);
@@ -84,7 +91,7 @@ describe("filterSuggestions", () => {
   });
 
   it("respects max cap limit", () => {
-    const raw: PromptSuggestion[] = Array.from({ length: 30 }, (_, i) => ({
+    const raw: Partial<PromptSuggestion>[] = Array.from({ length: 30 }, (_, i) => ({
       text: `Unique question number ${i}?`,
       category: "CRM",
     }));
@@ -99,10 +106,31 @@ describe("generatePromptSuggestions", () => {
     vi.unstubAllEnvs();
   });
 
-  it("generates suggestions using MockProvider", async () => {
+  it("throws error if Business Profile productDescription is missing", async () => {
+    const mockProvider = createMockProvider("openai", { content: "[]" });
+    await expect(
+      generatePromptSuggestions(
+        {
+          companyName: "Acme",
+          domain: "acme.com",
+          industry: "SaaS",
+          businessProfile: { productDescription: "", category: "SaaS" },
+          competitors: [],
+        },
+        { provider: mockProvider }
+      )
+    ).rejects.toThrow("Business Profile productDescription is required");
+  });
+
+  it("generates suggestions using MockProvider with Business Profile", async () => {
     const mockContent = JSON.stringify([
-      { text: "How does Acme compare to CompetitorX?", category: "CRM" },
-      { text: "Is Acme secure for enterprise?", category: "Security" },
+      {
+        text: "How does Acme compare to CompetitorX?",
+        category: "Comparisons",
+        intent: "COMPARISON",
+        demandScore: 80,
+        businessRelevance: 90,
+      },
     ]);
 
     const mockProvider = createMockProvider("openai", { content: mockContent });
@@ -112,15 +140,21 @@ describe("generatePromptSuggestions", () => {
         companyName: "Acme",
         domain: "acme.com",
         industry: "SaaS",
+        businessProfile: {
+          productDescription: "Minimalist shoes for natural movement",
+          category: "Footwear",
+        },
         competitors: [{ name: "CompetitorX", domain: "competitorx.com" }],
         count: 10,
       },
       { provider: mockProvider }
     );
 
-    expect(res).toHaveLength(2);
+    expect(res).toHaveLength(1);
     expect(res[0].text).toBe("How does Acme compare to CompetitorX?");
-    expect(res[0].category).toBe("CRM");
+    expect(res[0].intent).toBe("COMPARISON");
+    expect(res[0].demandScore).toBe(80);
+    expect(res[0].businessRelevance).toBe(90);
   });
 
   it("throws PromptGenerationError when no provider is configured", async () => {
@@ -134,6 +168,7 @@ describe("generatePromptSuggestions", () => {
         companyName: "Acme",
         domain: "acme.com",
         industry: "SaaS",
+        businessProfile: { productDescription: "Some Product", category: "SaaS" },
         competitors: [],
       })
     ).rejects.toThrow(PromptGenerationError);

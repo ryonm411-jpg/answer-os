@@ -2,6 +2,7 @@ import { task, logger, AbortTaskRunError } from "@trigger.dev/sdk";
 import { prisma } from "@/lib/db/prisma";
 import { getPromptsForCompany } from "@/lib/db/prompts";
 import { deleteScanResults, createScanResults } from "@/lib/db/results";
+import { saveScanRecommendations } from "@/lib/db/recommendations";
 import type { ScanResultInput } from "@/lib/db/results";
 import { AIProviderError } from "@/lib/providers/errors";
 import { getAvailableProviders } from "@/lib/providers/registry";
@@ -171,6 +172,7 @@ export const runScan = task({
       }
 
       await createScanResults(scanId, results);
+      await saveScanRecommendations(scan.companyId, scanId);
       await prisma.scan.update({
         where: { id: scanId },
         data: { status: "COMPLETED", completedAt: new Date() },
