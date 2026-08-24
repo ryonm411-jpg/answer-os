@@ -4,6 +4,7 @@ import {
   DEFAULT_MAX_TOKENS,
   DEFAULT_TEMPERATURE,
   DEFAULT_TIMEOUT_MS,
+  geminiApiKey,
   resolveModel,
 } from "./config";
 import { toProviderError } from "./errors";
@@ -15,7 +16,7 @@ export function isConfigured(): boolean {
 
 export class GeminiProvider implements AIProvider {
   readonly name = "gemini" as const;
-  private readonly sdk = createGoogleGenerativeAI();
+  private readonly sdk = createGoogleGenerativeAI({ apiKey: geminiApiKey() });
 
   async ask(
     prompt: string,

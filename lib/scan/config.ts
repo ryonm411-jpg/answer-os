@@ -1,6 +1,6 @@
 /** Token budget for scan calls: the completion plus the metadata block needs
  *  more room than the provider layer's 2048 default. */
-export const SCAN_MAX_TOKENS = 4096;
+export const SCAN_MAX_TOKENS = 1024;
 /** Keep the provider default (0.2): deterministic, factual answers for scanning. */
 export const SCAN_TEMPERATURE = 0.2;
 /** 1 initial call + 2 retries, for retryable AIProviderError only (Decision #3). */

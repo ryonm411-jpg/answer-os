@@ -1,8 +1,11 @@
 import { AnthropicProvider, isConfigured as isAnthropicConfigured } from "./anthropic";
 import { AIProviderError } from "./errors";
 import { GeminiProvider, isConfigured as isGeminiConfigured } from "./gemini";
+import { GroqProvider, isConfigured as isGroqConfigured } from "./groq";
 import { MockProvider } from "./mock";
+import { NvidiaProvider, isConfigured as isNvidiaConfigured } from "./nvidia";
 import { OpenAIProvider, isConfigured as isOpenAIConfigured } from "./openai";
+import { OpenRouterProvider, isConfigured as isOpenRouterConfigured } from "./openrouter";
 import { PerplexityProvider, isConfigured as isPerplexityConfigured } from "./perplexity";
 import type { AIProvider, AIProviderName, MockOverrides } from "./types";
 
@@ -13,6 +16,9 @@ const envKeyNames: Record<AIProviderName, string> = {
   anthropic: "ANTHROPIC_API_KEY",
   gemini: "GEMINI_API_KEY",
   perplexity: "PERPLEXITY_API_KEY",
+  groq: "GROQ_API_KEY",
+  nvidia: "NVIDIA_NIM_API_KEY",
+  openrouter: "OPEN_ROUTER_API_KEY",
 };
 
 export function isProviderConfigured(name: AIProviderName): boolean {
@@ -28,6 +34,12 @@ export function isProviderConfigured(name: AIProviderName): boolean {
       return isGeminiConfigured();
     case "perplexity":
       return isPerplexityConfigured();
+    case "groq":
+      return isGroqConfigured();
+    case "nvidia":
+      return isNvidiaConfigured();
+    case "openrouter":
+      return isOpenRouterConfigured();
     default:
       return false;
   }
@@ -35,7 +47,7 @@ export function isProviderConfigured(name: AIProviderName): boolean {
 
 export function getProvider(name: AIProviderName): AIProvider {
   if (process.env.USE_MOCK_PROVIDERS === "true") {
-    if (!providerInstances[name]) {
+    if (!(providerInstances[name] instanceof MockProvider)) {
       providerInstances[name] = new MockProvider(name);
     }
     return providerInstances[name]!;
@@ -52,7 +64,7 @@ export function getProvider(name: AIProviderName): AIProvider {
     );
   }
 
-  if (!providerInstances[name]) {
+  if (!providerInstances[name] || providerInstances[name] instanceof MockProvider) {
     switch (name) {
       case "openai":
         providerInstances[name] = new OpenAIProvider();
@@ -66,6 +78,15 @@ export function getProvider(name: AIProviderName): AIProvider {
       case "perplexity":
         providerInstances[name] = new PerplexityProvider();
         break;
+      case "groq":
+        providerInstances[name] = new GroqProvider();
+        break;
+      case "nvidia":
+        providerInstances[name] = new NvidiaProvider();
+        break;
+      case "openrouter":
+        providerInstances[name] = new OpenRouterProvider();
+        break;
     }
   }
 
@@ -73,7 +94,15 @@ export function getProvider(name: AIProviderName): AIProvider {
 }
 
 export function getAvailableProviders(): AIProvider[] {
-  const names: AIProviderName[] = ["openai", "anthropic", "gemini", "perplexity"];
+  const names: AIProviderName[] = [
+    "gemini",
+    "groq",
+    "nvidia",
+    "openrouter",
+    "openai",
+    "anthropic",
+    "perplexity",
+  ];
   return names
     .filter((name) => isProviderConfigured(name))
     .map((name) => getProvider(name));

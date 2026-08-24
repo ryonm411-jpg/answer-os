@@ -7,7 +7,7 @@ import type { ScanResultInput } from "@/lib/db/results";
 import { AIProviderError } from "@/lib/providers/errors";
 import { getAvailableProviders } from "@/lib/providers/registry";
 import { TO_PRISMA_PROVIDER } from "@/lib/providers/types";
-import type { AIProvider, AIResponse } from "@/lib/providers/types";
+import type { AIProvider, AIProviderName, AIResponse } from "@/lib/providers/types";
 import { buildScanPrompt } from "@/lib/scan/prompt";
 import { parseScanResponse } from "@/lib/scan/parse";
 import {
@@ -136,8 +136,11 @@ async function scanPrompt(input: {
 
 export const runScan = task({
   id: "scan-company",
-  run: async (payload: { scanId: string }, { ctx }) => {
-    const { scanId } = payload;
+  run: async (
+    payload: { scanId: string; providers?: AIProviderName[] },
+    { ctx }
+  ) => {
+    const { scanId, providers: allowedNames } = payload;
 
     const scan = await prisma.scan.findUnique({
       where: { id: scanId },
@@ -151,24 +154,36 @@ export const runScan = task({
     });
 
     try {
-      const [prompts, providers] = await Promise.all([
-        getPromptsForCompany(scan.companyId),
-        Promise.resolve(getAvailableProviders()),
-      ]);
+      const allConfigured = getAvailableProviders();
+      const providers = allowedNames
+        ? allConfigured.filter((p) => allowedNames.includes(p.name))
+        : allConfigured;
+
+      const prompts = await getPromptsForCompany(scan.companyId);
 
       await deleteScanResults(scanId); // retry idempotency (Decision #8)
 
       const results: ScanResultInput[] = [];
+      const scanTasks: Array<() => Promise<ScanResultInput>> = [];
+
       for (const provider of providers) {
         for (const prompt of prompts) {
-          results.push(
-            await scanPrompt({
+          scanTasks.push(() =>
+            scanPrompt({
               provider,
               prompt: { id: prompt.id, text: prompt.text },
               company: scan.company,
             })
           );
         }
+      }
+
+      // Execute in bounded parallel batches (concurrency = 5) to prevent 30-minute sequential bottlenecks
+      const BATCH_SIZE = 5;
+      for (let i = 0; i < scanTasks.length; i += BATCH_SIZE) {
+        const batch = scanTasks.slice(i, i + BATCH_SIZE).map((fn) => fn());
+        const batchResults = await Promise.all(batch);
+        results.push(...batchResults);
       }
 
       await createScanResults(scanId, results);

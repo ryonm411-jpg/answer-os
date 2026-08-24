@@ -1,6 +1,13 @@
 import type { AIProviderError } from "./errors";
 
-export type AIProviderName = "openai" | "anthropic" | "gemini" | "perplexity";
+export type AIProviderName =
+  | "openai"
+  | "anthropic"
+  | "gemini"
+  | "perplexity"
+  | "groq"
+  | "nvidia"
+  | "openrouter";
 
 export interface AIProviderConfig {
   apiKey?: string;
@@ -35,4 +42,7 @@ export const TO_PRISMA_PROVIDER: Record<AIProviderName, string> = {
   anthropic: "ANTHROPIC",
   gemini: "GEMINI",
   perplexity: "PERPLEXITY",
+  groq: "GROQ",
+  nvidia: "NVIDIA",
+  openrouter: "OPENROUTER",
 };

@@ -1,21 +1,21 @@
-import { createOpenAI } from "@ai-sdk/openai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateText } from "ai";
 import {
   DEFAULT_MAX_TOKENS,
   DEFAULT_TEMPERATURE,
   DEFAULT_TIMEOUT_MS,
-  openaiApiKey,
+  groqApiKey,
   resolveModel,
 } from "./config";
 import { toProviderError } from "./errors";
 import type { AIProvider, AIProviderConfig, AIResponse } from "./types";
 
 export function isConfigured(): boolean {
-  return Boolean(openaiApiKey());
+  return Boolean(groqApiKey());
 }
 
-export class OpenAIProvider implements AIProvider {
-  readonly name = "openai" as const;
+export class GroqProvider implements AIProvider {
+  readonly name = "groq" as const;
 
   async ask(
     prompt: string,
@@ -23,8 +23,13 @@ export class OpenAIProvider implements AIProvider {
   ): Promise<AIResponse> {
     const startedAt = performance.now();
     try {
-      const sdk = createOpenAI({ apiKey: openaiApiKey() });
-      const modelId = resolveModel("openai", config.model);
+      const sdk = createOpenAICompatible({
+        name: "groq",
+        baseURL: "https://api.groq.com/openai/v1",
+        apiKey: groqApiKey(),
+      });
+
+      const modelId = resolveModel("groq", config.model);
       const result = await generateText({
         model: sdk(modelId),
         prompt,
@@ -40,7 +45,7 @@ export class OpenAIProvider implements AIProvider {
         latencyMs: Math.round(performance.now() - startedAt),
       };
     } catch (err) {
-      throw toProviderError("openai", err);
+      throw toProviderError("groq", err);
     }
   }
 }

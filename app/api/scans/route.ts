@@ -4,6 +4,7 @@ import { tasks } from "@trigger.dev/sdk";
 import { prisma } from "@/lib/db/prisma";
 import { getCompanyByClerkId } from "@/lib/db/companies";
 import { hasActiveSubscription } from "@/lib/db/subscriptions";
+import { getAvailableProviders, resolveAllowedProviders } from "@/lib/providers";
 import type { runScan } from "@/lib/jobs/scan";
 
 /**
@@ -28,19 +29,10 @@ export async function POST() {
     );
   }
 
-  // Server-side entitlement check (spec §12, Decision #9)
+  // Server-side entitlement check: resolve allowed provider set (spec 17, Decision #4)
   const isEntitled = await hasActiveSubscription(company.id);
-  if (!isEntitled) {
-    return NextResponse.json(
-      {
-        error: {
-          message:
-            "An active AnswerOS subscription is required for this action. Open Billing to subscribe or manage your plan.",
-        },
-      },
-      { status: 402 }
-    );
-  }
+  const configured = getAvailableProviders().map((p) => p.name);
+  const providers = resolveAllowedProviders({ entitled: isEntitled, configured });
 
   // Stale-PENDING recovery (12, Decision #11): a trigger that was accepted but
   // never dequeued must not block future scans forever.
@@ -92,7 +84,10 @@ export async function POST() {
   });
 
   try {
-    await tasks.trigger<typeof runScan>("scan-company", { scanId: scan.id });
+    await tasks.trigger<typeof runScan>("scan-company", {
+      scanId: scan.id,
+      providers,
+    });
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (_error) {
     await prisma.scan.update({
@@ -106,7 +101,7 @@ export async function POST() {
   }
 
   return NextResponse.json(
-    { data: { scanId: scan.id, status: "PENDING" } },
+    { data: { scanId: scan.id, status: "PENDING", providers } },
     { status: 202 }
   );
 }

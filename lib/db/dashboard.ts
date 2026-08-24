@@ -67,6 +67,17 @@ export interface DashboardData {
 
 /** Get the latest scan metadata for status display */
 export async function getLatestScanForCompany(companyId: string): Promise<LatestScanSummary | null> {
+  // Stale scan recovery: mark PENDING/RUNNING scans older than 10 minutes as FAILED
+  const STALE_SCAN_MS = 10 * 60 * 1000;
+  await prisma.scan.updateMany({
+    where: {
+      companyId,
+      status: { in: ["PENDING", "RUNNING"] },
+      createdAt: { lt: new Date(Date.now() - STALE_SCAN_MS) },
+    },
+    data: { status: "FAILED", completedAt: new Date() },
+  });
+
   const scan = await prisma.scan.findFirst({
     where: { companyId },
     orderBy: { createdAt: "desc" },

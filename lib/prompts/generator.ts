@@ -1,6 +1,5 @@
 import { getAvailableProviders } from "../providers/registry";
 import type { AIProvider } from "../providers/types";
-import { AIProviderError } from "../providers/errors";
 import { CURATED_PROMPTS, PROMPT_CATEGORIES, normalizePromptText } from "./curated";
 import { PromptGenerationError } from "./errors";
 import type { PromptIntent } from "./intent";
@@ -139,7 +138,7 @@ export function filterSuggestions(
 
 export async function generatePromptSuggestions(
   input: GeneratePromptSuggestionsInput,
-  opts?: { provider?: AIProvider }
+  opts?: { provider?: AIProvider; providers?: AIProvider[] }
 ): Promise<PromptSuggestion[]> {
   if (
     !input.businessProfile ||
@@ -149,8 +148,13 @@ export async function generatePromptSuggestions(
     throw new PromptGenerationError("Business Profile productDescription is required for prompt generation");
   }
 
-  const provider = opts?.provider ?? getAvailableProviders()[0];
-  if (!provider) {
+  const candidateProviders: AIProvider[] = opts?.provider
+    ? [opts.provider]
+    : opts?.providers && opts.providers.length > 0
+    ? opts.providers
+    : getAvailableProviders();
+
+  if (candidateProviders.length === 0) {
     throw new PromptGenerationError("No AI provider configured");
   }
 
@@ -211,19 +215,31 @@ Example JSON output format:
   }
 ]`;
 
-  let responseContent: string;
-  try {
-    const response = await provider.ask(prompt, {
-      maxTokens: 4096,
-      temperature: 0.8,
-    });
-    responseContent = response.content;
-  } catch (err) {
-    if (err instanceof AIProviderError) {
-      throw err;
+  let responseContent: string | null = null;
+  const providerErrors: { name: string; message: string }[] = [];
+
+  for (const provider of candidateProviders) {
+    try {
+      const response = await provider.ask(prompt, {
+        maxTokens: 4096,
+        temperature: 0.8,
+        timeoutMs: 60_000,
+      });
+      responseContent = response.content;
+      break;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      providerErrors.push({ name: provider.name, message });
+      console.warn(`[PromptGenerator] Provider "${provider.name}" failed, trying next provider if available:`, err);
     }
+  }
+
+  if (responseContent === null) {
+    const summary = providerErrors
+      .map((e) => `${e.name}: ${e.message}`)
+      .join("; ");
     throw new PromptGenerationError(
-      err instanceof Error ? err.message : "Failed to generate prompt suggestions"
+      `All providers failed — ${summary}`
     );
   }
 

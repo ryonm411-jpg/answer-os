@@ -19,7 +19,7 @@ Buyers increasingly ask AI models for software recommendations (e.g., *"What is 
 - **Database Layer:** PostgreSQL hosted on Neon (Serverless Postgres) with **Prisma v7** ORM (`@prisma/adapter-neon`).
 - **Caching Layer:** **Upstash Redis** (`@upstash/redis` via HTTP/REST) for prompt result caching with a 24-hour TTL.
 - **Background Worker & Task Queue:** **Trigger.dev v3** (`@trigger.dev/sdk`) background task engine.
-- **AI Integration Layer:** Vercel AI SDK (`ai`), wrapping OpenAI, Anthropic, Gemini, and Perplexity APIs.
+- **AI Integration Layer:** Vercel AI SDK (`ai`), wrapping 7 AI providers: Free Tier (`Gemini`, `Groq`, `Nvidia NIM`, `OpenRouter`, `OpenAI`) and Premium Tier (`Anthropic`, `Perplexity`). Supports fallback candidate iteration and tier entitlement checks.
 - **Visibility Scoring Engine:** Server-only multi-factor weighted scoring algorithm (`lib/scoring/`).
 - **Prompt Opportunity & Management:** Seven buyer-intent taxonomy (`lib/prompts/intent.ts`), Business Profile–grounded AI suggestion generator (`lib/prompts/generator.ts`), server-side Opportunity Score calculator (`lib/scoring/opportunity.ts`), and pre-scan review workspace UI (`app/(editor)/prompts/page.tsx`).
 

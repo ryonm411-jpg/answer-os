@@ -1,10 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Check, CreditCard, ExternalLink, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
+import { CreditCard, ExternalLink, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { BillingStatusBadge } from "./billing-status-badge";
+import { ProviderAccessList } from "./provider-access-list";
 import type { BillingStatus } from "@/lib/stripe/server";
 
 export interface SubscriptionCardProps {
@@ -41,7 +42,7 @@ export function SubscriptionCard({
     : null;
 
   return (
-    <Card className="border-border bg-card shadow-lg max-w-2xl w-full mx-auto">
+    <Card className="border-border bg-card shadow-lg max-w-3xl w-full mx-auto">
       <CardHeader className="space-y-3 pb-6 border-b border-border/50">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -50,10 +51,12 @@ export function SubscriptionCard({
             </div>
             <div>
               <CardTitle className="text-xl font-bold tracking-tight text-foreground">
-                AnswerOS Monthly Subscription
+                AnswerOS Subscription & Entitlement
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground mt-0.5">
-                Full AI Visibility & Prompt Intelligence Access
+                {isEntitled
+                  ? "Full AI Visibility & Multi-Provider Intelligence Access Unlocked"
+                  : "Free Tier Active — Gemini, Groq, NVIDIA NIM, & OpenRouter Scans Enabled"}
               </CardDescription>
             </div>
           </div>
@@ -108,27 +111,8 @@ export function SubscriptionCard({
           </div>
         )}
 
-        {/* Plan Features */}
-        <div className="space-y-3">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Included Features
-          </h2>
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-sm">
-            {[
-              "Multi-Provider AI Scanning (OpenAI, Claude, Gemini, Perplexity)",
-              "Weighted Visibility Scoring (0–100)",
-              "Prompt Library & Custom Prompt Workspace",
-              "Competitor Mentions & Share Analysis",
-              "Actionable Recommendation Engine",
-              "Trigger.dev Async Scanner Runs",
-            ].map((feature) => (
-              <li key={feature} className="flex items-start gap-2 text-foreground/90">
-                <Check className="h-4 w-4 shrink-0 text-emerald-400 mt-0.5" />
-                <span className="text-xs leading-relaxed">{feature}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        {/* Provider Access List */}
+        <ProviderAccessList entitled={isEntitled} />
 
         {/* Period Info */}
         {hasSubscription && formattedPeriodEnd && (
@@ -179,7 +163,7 @@ export function SubscriptionCard({
               ) : (
                 <CreditCard className="h-4 w-4" />
               )}
-              <span>Subscribe Now</span>
+              <span>Subscribe to Unlock All Providers</span>
             </Button>
           )}
         </div>

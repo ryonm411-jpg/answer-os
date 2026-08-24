@@ -3,8 +3,11 @@ import type { AIProviderName } from "./types";
 export const DEFAULT_MODELS: Record<AIProviderName, string> = {
   openai: "gpt-4o",
   anthropic: "claude-3-5-sonnet-latest",
-  gemini: "gemini-2.5-flash",
+  gemini: "gemini-3.6-flash",
   perplexity: "sonar",
+  groq: "groq/compound",
+  nvidia: "meta/llama-3.3-70b-instruct",
+  openrouter: "openrouter/free",
 };
 
 export const DEFAULT_MAX_TOKENS = 2048;
@@ -24,6 +27,9 @@ export function resolveModel(
     anthropic: process.env.ANTHROPIC_MODEL,
     gemini: process.env.GEMINI_MODEL,
     perplexity: process.env.PERPLEXITY_MODEL,
+    groq: process.env.GROQ_MODEL,
+    nvidia: process.env.NVIDIA_MODEL,
+    openrouter: process.env.OPENROUTER_MODEL,
   };
 
   const envModel = envKeyMap[name];
@@ -32,4 +38,24 @@ export function resolveModel(
   }
 
   return DEFAULT_MODELS[name];
+}
+
+export function openaiApiKey(): string | undefined {
+  return process.env.OPENAI_API_KEY?.trim() || undefined;
+}
+
+export function geminiApiKey(): string | undefined {
+  return process.env.GEMINI_API_KEY?.trim() || undefined;
+}
+
+export function groqApiKey(): string | undefined {
+  return process.env.GROQ_API_KEY?.trim() || undefined;
+}
+
+export function nvidiaApiKey(): string | undefined {
+  return process.env.NVIDIA_NIM_API_KEY?.trim() || undefined;
+}
+
+export function openrouterApiKey(): string | undefined {
+  return process.env.OPEN_ROUTER_API_KEY?.trim() || undefined;
 }

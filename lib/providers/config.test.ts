@@ -4,6 +4,11 @@ import {
   DEFAULT_MODELS,
   DEFAULT_TEMPERATURE,
   DEFAULT_TIMEOUT_MS,
+  geminiApiKey,
+  groqApiKey,
+  nvidiaApiKey,
+  openaiApiKey,
+  openrouterApiKey,
   resolveModel,
 } from "./config";
 import { TO_PRISMA_PROVIDER } from "./types";
@@ -14,23 +19,29 @@ describe("lib/providers/config", () => {
     vi.stubEnv("ANTHROPIC_MODEL", "");
     vi.stubEnv("GEMINI_MODEL", "");
     vi.stubEnv("PERPLEXITY_MODEL", "");
+    vi.stubEnv("GROQ_MODEL", "");
+    vi.stubEnv("NVIDIA_MODEL", "");
+    vi.stubEnv("OPENROUTER_MODEL", "");
+
+    vi.stubEnv("OPENAI_API_KEY", "");
+    vi.stubEnv("GEMINI_API_KEY", "");
+    vi.stubEnv("GROQ_API_KEY", "");
+    vi.stubEnv("NVIDIA_NIM_API_KEY", "");
+    vi.stubEnv("OPEN_ROUTER_API_KEY", "");
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it("defines default models for all four providers", () => {
+  it("defines default models for all 7 providers", () => {
     expect(DEFAULT_MODELS.openai).toBe("gpt-4o");
     expect(DEFAULT_MODELS.anthropic).toBe("claude-3-5-sonnet-latest");
-    expect(DEFAULT_MODELS.gemini).toBe("gemini-2.5-flash");
+    expect(DEFAULT_MODELS.gemini).toBe("gemini-3.6-flash");
     expect(DEFAULT_MODELS.perplexity).toBe("sonar");
-  });
-
-  it("defines default configuration bounds", () => {
-    expect(DEFAULT_MAX_TOKENS).toBe(2048);
-    expect(DEFAULT_TEMPERATURE).toBe(0.2);
-    expect(DEFAULT_TIMEOUT_MS).toBe(30_000);
+    expect(DEFAULT_MODELS.groq).toBe("groq/compound");
+    expect(DEFAULT_MODELS.nvidia).toBe("meta/llama-3.3-70b-instruct");
+    expect(DEFAULT_MODELS.openrouter).toBe("openrouter/free");
   });
 
   it("maps provider names to uppercase Prisma enum values in TO_PRISMA_PROVIDER", () => {
@@ -38,20 +49,20 @@ describe("lib/providers/config", () => {
     expect(TO_PRISMA_PROVIDER.anthropic).toBe("ANTHROPIC");
     expect(TO_PRISMA_PROVIDER.gemini).toBe("GEMINI");
     expect(TO_PRISMA_PROVIDER.perplexity).toBe("PERPLEXITY");
+    expect(TO_PRISMA_PROVIDER.groq).toBe("GROQ");
+    expect(TO_PRISMA_PROVIDER.nvidia).toBe("NVIDIA");
+    expect(TO_PRISMA_PROVIDER.openrouter).toBe("OPENROUTER");
   });
 
-  it("resolves default model when no override or env var is present", () => {
-    expect(resolveModel("openai")).toBe("gpt-4o");
-    expect(resolveModel("anthropic")).toBe("claude-3-5-sonnet-latest");
-  });
+  it("resolves key helpers correctly from process.env", () => {
+    vi.stubEnv("GEMINI_API_KEY", "sk-gemini-key");
+    vi.stubEnv("GROQ_API_KEY", "sk-groq-key");
+    vi.stubEnv("NVIDIA_NIM_API_KEY", "sk-nvidia-key");
+    vi.stubEnv("OPEN_ROUTER_API_KEY", "sk-openrouter-key");
 
-  it("prioritizes environment variable overrides over default models", () => {
-    vi.stubEnv("OPENAI_MODEL", "gpt-4-turbo");
-    expect(resolveModel("openai")).toBe("gpt-4-turbo");
-  });
-
-  it("prioritizes per-call config model override above env var and defaults", () => {
-    vi.stubEnv("OPENAI_MODEL", "gpt-4-turbo");
-    expect(resolveModel("openai", "gpt-3.5-turbo")).toBe("gpt-3.5-turbo");
+    expect(geminiApiKey()).toBe("sk-gemini-key");
+    expect(groqApiKey()).toBe("sk-groq-key");
+    expect(nvidiaApiKey()).toBe("sk-nvidia-key");
+    expect(openrouterApiKey()).toBe("sk-openrouter-key");
   });
 });

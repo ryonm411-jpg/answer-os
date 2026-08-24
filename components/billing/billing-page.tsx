@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AlertCircle } from "lucide-react";
+import { PlanCards } from "./plan-card";
 import { SubscriptionCard } from "./subscription-card";
 import { startCheckout, openPortal, getBillingStatus } from "@/lib/api/billing";
 import type { BillingStatus } from "@/lib/stripe/server";
@@ -76,10 +77,10 @@ export function BillingPage({ initialStatus, domainName }: BillingPageProps) {
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-          Billing & Subscription
+          Plans & Billing
         </h1>
         <p className="text-sm text-muted-foreground">
-          Manage payment options and access entitlement for{" "}
+          Manage plans, payment options, and AI provider access for{" "}
           <span className="font-semibold text-foreground">
             {domainName ?? "your company"}
           </span>
@@ -103,7 +104,16 @@ export function BillingPage({ initialStatus, domainName }: BillingPageProps) {
         </div>
       )}
 
-      {/* Main Card */}
+      {/* Plan Comparison Cards */}
+      <PlanCards
+        entitled={status.entitled}
+        onSubscribe={handleSubscribe}
+        onManagePortal={handleManagePortal}
+        isLoadingCheckout={isLoadingCheckout}
+        isLoadingPortal={isLoadingPortal}
+      />
+
+      {/* Detailed Subscription & Provider Access Card */}
       <SubscriptionCard
         status={status}
         onSubscribe={handleSubscribe}

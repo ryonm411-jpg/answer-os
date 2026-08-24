@@ -4,7 +4,11 @@ import { getCompanyByClerkId } from "@/lib/db/companies";
 import { hasActiveSubscription } from "@/lib/db/subscriptions";
 import { addNewAiSuggestions } from "@/lib/db/prompts";
 import { prisma } from "@/lib/db/prisma";
-
+import {
+  getAvailableProviders,
+  getProvider,
+  resolveAllowedProviders,
+} from "@/lib/providers";
 import { generatePromptSuggestions } from "@/lib/prompts/generator";
 import { PromptGenerationError } from "@/lib/prompts/errors";
 import { AIProviderError } from "@/lib/providers/errors";
@@ -26,19 +30,12 @@ export async function POST(req: Request) {
     );
   }
 
-  // Server-side entitlement check (spec §12, Decision #9)
+  // Server-side entitlement check: resolve allowed provider set (spec 17, Decision #6)
   const isEntitled = await hasActiveSubscription(company.id);
-  if (!isEntitled) {
-    return NextResponse.json(
-      {
-        error: {
-          message:
-            "An active AnswerOS subscription is required for this action. Open Billing to subscribe or manage your plan.",
-        },
-      },
-      { status: 402 }
-    );
-  }
+  const configured = getAvailableProviders().map((p) => p.name);
+  const allowedNames = resolveAllowedProviders({ entitled: isEntitled, configured });
+  const providerNames = allowedNames.length > 0 ? allowedNames : configured;
+  const providers = providerNames.map((name) => getProvider(name));
 
   // Refuse generation while scan is active
   const activeScan = await prisma.scan.findFirst({
@@ -92,16 +89,19 @@ export async function POST(req: Request) {
   });
 
   try {
-    const suggestions = await generatePromptSuggestions({
-      companyName: company.name,
-      domain: company.domain,
-      industry: company.industry,
-      businessProfile: {
-        productDescription,
-        category,
+    const suggestions = await generatePromptSuggestions(
+      {
+        companyName: company.name,
+        domain: company.domain,
+        industry: company.industry,
+        businessProfile: {
+          productDescription,
+          category,
+        },
+        competitors,
       },
-      competitors,
-    });
+      providers.length > 0 ? { providers } : undefined
+    );
 
     // Additive generation per spec §8 & §22.5: skips duplicates, preserves user edits
     const result = await addNewAiSuggestions(company.id, suggestions);

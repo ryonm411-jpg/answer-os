@@ -19,6 +19,10 @@ enum AIProvider {
   ANTHROPIC
   GEMINI
   PERPLEXITY
+  DEEPSEEK
+  GROQ
+  NVIDIA
+  OPENROUTER
 }
 
 enum Sentiment {
