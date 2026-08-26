@@ -127,43 +127,72 @@ export async function addNewAiSuggestions(
   companyId: string,
   suggestions: PromptSuggestionInput[]
 ) {
-  // Fetch active texts to deduplicate (spec §10).
-  const existingPrompts = await getPromptsForCompany(companyId);
-  const existingTexts = new Set(
-    existingPrompts.map((p) => normalizeText(p.text))
-  );
-
-  const newSuggestions = suggestions.filter(
-    (s) => !existingTexts.has(normalizeText(s.text))
-  );
-
-  if (newSuggestions.length === 0) {
-    return { count: 0, prompts: [] };
-  }
-
-  await prisma.prompt.createMany({
-    data: newSuggestions.map((s) => ({
-      companyId,
-      source: "AI_SUGGESTED" as const,
-      intent: (s.intent as PromptIntent) ?? "PRODUCT",
-      text: s.text.trim(),
-      category: s.category || "Other",
-      demandScore: s.demandScore ?? 50,
-      businessRelevance: s.businessRelevance ?? 70,
-    })),
+  // Fetch ALL prompts for this company (active and archived)
+  const allCompanyPrompts = await prisma.prompt.findMany({
+    where: { OR: [{ companyId }, { companyId: null }] },
   });
 
-  const created = await prisma.prompt.findMany({
+  const activeTexts = new Set(
+    allCompanyPrompts
+      .filter((p) => p.archivedAt === null)
+      .map((p) => normalizeText(p.text))
+  );
+
+  const archivedMap = new Map<string, string>(); // normalizedText -> promptId
+  allCompanyPrompts
+    .filter((p) => p.archivedAt !== null && p.companyId === companyId)
+    .forEach((p) => {
+      archivedMap.set(normalizeText(p.text), p.id);
+    });
+
+  const toUnarchiveIds: string[] = [];
+  const brandNewSuggestions: PromptSuggestionInput[] = [];
+
+  for (const s of suggestions) {
+    const norm = normalizeText(s.text);
+    if (activeTexts.has(norm)) {
+      continue; // already active in workspace
+    }
+    if (archivedMap.has(norm)) {
+      toUnarchiveIds.push(archivedMap.get(norm)!);
+    } else {
+      brandNewSuggestions.push(s);
+    }
+  }
+
+  if (toUnarchiveIds.length > 0) {
+    await prisma.prompt.updateMany({
+      where: { id: { in: toUnarchiveIds } },
+      data: { archivedAt: null },
+    });
+  }
+
+  if (brandNewSuggestions.length > 0) {
+    await prisma.prompt.createMany({
+      data: brandNewSuggestions.map((s) => ({
+        companyId,
+        source: "AI_SUGGESTED" as const,
+        intent: (s.intent as PromptIntent) ?? "PRODUCT",
+        text: s.text.trim(),
+        category: s.category || "Other",
+        demandScore: s.demandScore ?? 50,
+        businessRelevance: s.businessRelevance ?? 70,
+      })),
+    });
+  }
+
+  const activePrompts = await prisma.prompt.findMany({
     where: {
       companyId,
       source: "AI_SUGGESTED",
       archivedAt: null,
-      text: { in: newSuggestions.map((s) => s.text.trim()) },
+      text: { in: suggestions.map((s) => s.text.trim()) },
     },
     orderBy: [{ category: "asc" }, { text: "asc" }],
   });
 
-  return { count: created.length, prompts: created };
+  const totalAddedOrRestored = toUnarchiveIds.length + brandNewSuggestions.length;
+  return { count: totalAddedOrRestored, prompts: activePrompts };
 }
 
 /** Legacy export kept for backward-compatibility with onboarding route. */

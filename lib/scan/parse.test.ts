@@ -109,6 +109,24 @@ Hope this helps!`;
     }
   });
 
+  it("parses competitors from competitorsMentioned fallback key", () => {
+    const raw = JSON.stringify({
+      mentioned: true,
+      competitorsMentioned: [
+        { name: "Vivobarefoot", position: 2, sentiment: "neutral" },
+        { name: "Altra", position: 3, sentiment: "positive" },
+      ],
+    });
+    const result = parseScanResponse(raw);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.competitors).toEqual([
+        { name: "Vivobarefoot", position: 2, sentiment: "NEUTRAL" },
+        { name: "Altra", position: 3, sentiment: "POSITIVE" },
+      ]);
+    }
+  });
+
   it("coerces string boolean for mentioned", () => {
     const result = parseScanResponse(
       JSON.stringify({

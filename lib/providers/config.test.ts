@@ -34,9 +34,9 @@ describe("lib/providers/config", () => {
     expect(DEFAULT_MODELS.anthropic).toBe("claude-3-5-sonnet-latest");
     expect(DEFAULT_MODELS.gemini).toBe("gemini-3.6-flash");
     expect(DEFAULT_MODELS.perplexity).toBe("sonar");
-    expect(DEFAULT_MODELS.groq).toBe("groq/compound");
+    expect(DEFAULT_MODELS.groq).toBe("llama-3.3-70b-versatile");
     expect(DEFAULT_MODELS.nvidia).toBe("meta/llama-3.3-70b-instruct");
-    expect(DEFAULT_MODELS.openrouter).toBe("openrouter/free");
+    expect(DEFAULT_MODELS.openrouter).toBe("openrouter/auto");
   });
 
   it("maps provider names to uppercase Prisma enum values in TO_PRISMA_PROVIDER", () => {

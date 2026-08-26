@@ -53,9 +53,10 @@ async function scanPrompt(input: {
   company: { id: string; name: string; domain: string };
 }): Promise<ScanResultInput> {
   const { provider, prompt, company } = input;
-  // TO_PRISMA_PROVIDER is Record<AIProviderName, string> — cast to the Prisma enum
   const prismaProvider = TO_PRISMA_PROVIDER[provider.name] as import("@/generated/prisma").AIProvider;
-  const cacheKey = scanResultKey(company.id, prompt.id, provider.name);
+  const providerKey =
+    process.env.USE_MOCK_PROVIDERS === "true" ? `mock:${provider.name}` : provider.name;
+  const cacheKey = scanResultKey(company.id, prompt.id, providerKey);
 
   // Cache-first: a 24h-hit skips the provider call entirely but still persists (Decision #7).
   const cached = await getCachedScanResult(cacheKey);

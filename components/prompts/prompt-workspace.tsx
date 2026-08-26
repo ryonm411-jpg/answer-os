@@ -48,6 +48,7 @@ export function PromptWorkspace({
 
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [infoMessage, setInfoMessage] = React.useState("");
 
   const refreshPrompts = async () => {
     try {
@@ -77,6 +78,7 @@ export function PromptWorkspace({
 
   const handleGenerateSuggestions = async () => {
     setError("");
+    setInfoMessage("");
     setIsGenerating(true);
     try {
       const res = await fetch("/api/prompts/generate", {
@@ -87,6 +89,9 @@ export function PromptWorkspace({
       const json = await res.json();
       if (!res.ok) {
         throw new Error(json.error?.message || "Failed to generate suggestions");
+      }
+      if (json.data?.count === 0) {
+        setInfoMessage("All generated AI suggestions already exist in your active prompt workspace.");
       }
       await refreshPrompts();
     } catch (err) {
@@ -215,6 +220,12 @@ export function PromptWorkspace({
       {error && (
         <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md text-sm text-destructive font-medium">
           {error}
+        </div>
+      )}
+
+      {infoMessage && (
+        <div className="p-3 bg-primary/10 border border-primary/30 rounded-md text-sm text-primary font-medium">
+          {infoMessage}
         </div>
       )}
 

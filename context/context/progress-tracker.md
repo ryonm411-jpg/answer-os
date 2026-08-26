@@ -74,6 +74,22 @@ Update this file after every meaningful implementation change.
   7. Refactored `components/billing/provider-access-list.tsx` to consume `PROVIDER_CATALOG` + `PREMIUM_PROVIDERS` (single source of truth; OpenAI now displays as Free Tier, aligning the UI with `tiers.ts`).
   8. Added client fetch helpers `lib/api/providers.ts` (`getProviderCatalog`, `updateProviderPreferences`, `resetProviderPreferences`).
   9. Added `lib/providers/catalog.test.ts`, extended `lib/providers/tiers.test.ts` with `resolveEffectiveProviders` cases, and fixed a pre-existing `lib/prompts/generator.test.ts` gap (stubbed the 3 newer provider keys so no real provider call happens) — 107 unit tests passing across 19 test files; `npm run lint` and `npm run build` clean.
+- Implemented Brand & Competitor Visibility Dashboard (`context/features-specs/19-brand-competitor-visibility-dashboard.md`):
+  1. Extended `lib/db/dashboard.ts` with `BrandVisibilityPoint`, `MultiBrandTrendPoint`, `CompetitorLeaderboardRow` contracts and `getMultiBrandScoreHistory()` / `getCompetitorLeaderboard()` DB helpers.
+  2. Created REST endpoint `GET /api/dashboard/trend` in `app/api/dashboard/trend/route.ts` with Clerk authentication, company resolution, and `days` / `provider` filter params.
+  3. Created client API fetch helper `getDashboardTrend()` in `lib/api/dashboard.ts`.
+  4. Built `OverviewFilterBar` component (`components/dashboard/overview-filter-bar.tsx`) featuring brand pill badge, date range select (`14d`, `30d`, `90d`), AI model select (`All Models` + 7 provider catalog entries), and tooltip trigger `?`.
+  5. Built `VisibilityHoverTooltip` floating popover component (`components/dashboard/visibility-hover-tooltip.tsx`) displaying exact date header and brand visibility percentage breakdown.
+  6. Built `VisibilityTrendCard` component (`components/dashboard/visibility-trend-card.tsx`) with smooth cubic bezier SVG curves for primary brand + competitors, CSV export trigger, hover cursor line, data dots, and screen reader alternative.
+  7. Built `CompetitorLeaderboard` table component (`components/dashboard/competitor-leaderboard.tsx`) displaying rank `#`, brand logo/name, `Visibility (%)`, `Sentiment (0-100)` badge, and average `Position`, complete with column info tooltips `(i)` and `Show All` expand toggle.
+  8. Integrated filter state and new components into `components/dashboard/dashboard-content.tsx`, replacing older single-brand trend graph and basic competitor list.
+  9. Verified 107 unit tests passing across 19 test files.
+- Refined Prompt Workspace Lifecycle & Multi-Scan Trend Formatting:
+    1. Updated `lib/providers/mock.ts` to dynamically extract company name and primary category from prompt context, generating grounded 7-intent buyer questions for any company domain.
+    2. Updated `addNewAiSuggestions` in `lib/db/prompts.ts` to automatically un-archive (`archivedAt: null`) soft-deleted prompts when re-suggested by AI, restoring them directly into the active prompt workspace.
+    3. Updated `getMultiBrandScoreHistory` in `lib/db/dashboard.ts` to format X-axis labels as exact timestamps (`"10:27 PM"`, `"11:07 PM"`) when multiple scans occur on the same calendar day.
+    4. Added `mock:` namespace prefix to Upstash Redis cache keys in `lib/jobs/scan.ts` during mock provider runs, isolating mock results from live API scans.
+    5. Aligned default model identifiers in `lib/providers/config.ts` (`gemini-3.6-flash`, `llama-3.3-70b-versatile`, `openrouter/auto`) and `lib/providers/config.test.ts` (108 unit tests passing across 19 test files).
 
 ## In Progress
 

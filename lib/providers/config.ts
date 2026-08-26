@@ -5,9 +5,9 @@ export const DEFAULT_MODELS: Record<AIProviderName, string> = {
   anthropic: "claude-3-5-sonnet-latest",
   gemini: "gemini-3.6-flash",
   perplexity: "sonar",
-  groq: "groq/compound",
+  groq: "llama-3.3-70b-versatile",
   nvidia: "meta/llama-3.3-70b-instruct",
-  openrouter: "openrouter/free",
+  openrouter: "openrouter/auto",
 };
 
 export const DEFAULT_MAX_TOKENS = 2048;

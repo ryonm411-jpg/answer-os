@@ -76,8 +76,14 @@ export function parseScanResponse(content: string): ParseResult {
   const position = mentioned ? parsePosition(obj.position) : null;
 
   const competitors: ParsedCompetitorMention[] = [];
-  if (Array.isArray(obj.competitors)) {
-    for (const c of obj.competitors) {
+  const rawCompetitors = Array.isArray(obj.competitors)
+    ? obj.competitors
+    : Array.isArray(obj.competitorsMentioned)
+    ? obj.competitorsMentioned
+    : null;
+
+  if (rawCompetitors) {
+    for (const c of rawCompetitors) {
       if (typeof c !== "object" || c === null) continue;
       const comp = c as Record<string, unknown>;
       const name = typeof comp.name === "string" ? comp.name.trim() : "";

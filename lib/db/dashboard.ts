@@ -47,6 +47,29 @@ export interface LatestScanSummary {
   coverageRate: number; // 0..1 valid checks ratio
 }
 
+export interface BrandVisibilityPoint {
+  brandName: string;
+  isPrimary: boolean;
+  color: string;
+  visibilityPercent: number; // 0..100
+}
+
+export interface MultiBrandTrendPoint {
+  scanId: string;
+  date: string; // ISO date format "YYYY-MM-DD"
+  formattedDate: string; // e.g. "Sep 24"
+  brands: BrandVisibilityPoint[];
+}
+
+export interface CompetitorLeaderboardRow {
+  rank: number;
+  name: string;
+  logoUrl?: string;
+  visibilityPercent: number; // e.g. 60%
+  sentimentScore: number; // e.g. 72
+  averagePosition: number; // e.g. 2.7
+}
+
 export interface DashboardData {
   company: {
     id: string;
@@ -57,6 +80,8 @@ export interface DashboardData {
   latestCompletedScanId: string | null;
   score: ScoredScan | null;
   trend: DashboardTrendPoint[];
+  multiBrandTrend: MultiBrandTrendPoint[];
+  competitorLeaderboard: CompetitorLeaderboardRow[];
   promptPerformance: {
     topPrompts: PromptPerformanceItem[];
     missingOpportunities: PromptPerformanceItem[];
@@ -323,6 +348,8 @@ export async function getDashboardData(companyId: string): Promise<DashboardData
 
   const latestCompletedScanId = latestCompletedScan ? latestCompletedScan.id : null;
 
+  const multiBrandTrend = await getMultiBrandScoreHistory(companyId);
+  const competitorLeaderboard = await getCompetitorLeaderboard(latestCompletedScanId);
   const promptPerformance = await getPromptPerformanceForScan(latestCompletedScanId);
   const competitorMentions = await getCompetitorMentionsForScan(latestCompletedScanId);
   const recommendations = await getRecommendationsForCompany(companyId);
@@ -333,8 +360,232 @@ export async function getDashboardData(companyId: string): Promise<DashboardData
     latestCompletedScanId,
     score,
     trend,
+    multiBrandTrend,
+    competitorLeaderboard,
     promptPerformance,
     competitorMentions,
     recommendations,
   };
 }
+
+const BRAND_COLORS = [
+  "#06b6d4", // cyan
+  "#f59e0b", // amber
+  "#8b5cf6", // purple
+  "#ec4899", // pink
+  "#eab308", // yellow
+  "#ef4444", // red
+  "#3b82f6", // blue
+  "#14b8a6", // teal
+];
+
+/** Get multi-brand visibility score history across scans within date range */
+export async function getMultiBrandScoreHistory(
+  companyId: string,
+  opts?: { dateRangeDays?: number; provider?: string }
+): Promise<MultiBrandTrendPoint[]> {
+  const days = opts?.dateRangeDays ?? 14;
+  const providerFilter = opts?.provider && opts.provider !== "all" ? opts.provider.toUpperCase() : null;
+
+  const startDate = new Date();
+  startDate.setDate(startDate.getDate() - days);
+
+  const company = await prisma.company.findUnique({
+    where: { id: companyId },
+    select: { name: true },
+  });
+  const primaryBrandName = company?.name || "Primary Brand";
+
+  const scans = await prisma.scan.findMany({
+    where: {
+      companyId,
+      status: "COMPLETED",
+      completedAt: { gte: startDate },
+    },
+    orderBy: { completedAt: "desc" },
+    take: 30,
+    include: {
+      results: {
+        where: providerFilter ? { provider: providerFilter as import("@/generated/prisma").AIProvider } : undefined,
+      },
+    },
+  });
+
+  const chronologicalScans = [...scans].reverse();
+
+  // Find all distinct top competitor names across these scans
+  const competitorMentionCounts = new Map<string, number>();
+  for (const scan of chronologicalScans) {
+    for (const r of scan.results) {
+      if (r.error === null && Array.isArray(r.competitorsMentioned)) {
+        for (const item of r.competitorsMentioned as { name?: unknown }[]) {
+          if (typeof item?.name === "string" && item.name.trim().length > 0) {
+            const name = item.name.trim();
+            competitorMentionCounts.set(name, (competitorMentionCounts.get(name) || 0) + 1);
+          }
+        }
+      }
+    }
+  }
+
+  // Pick top 6 competitors by frequency
+  const topCompetitorNames = Array.from(competitorMentionCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([name]) => name);
+
+  // Map competitor names to distinct colors
+  const competitorColorMap = new Map<string, string>();
+  topCompetitorNames.forEach((name, index) => {
+    competitorColorMap.set(name, BRAND_COLORS[index % BRAND_COLORS.length]);
+  });
+
+  const allSameDay =
+    chronologicalScans.length > 1 &&
+    chronologicalScans.every(
+      (s) =>
+        (s.completedAt || s.createdAt).toISOString().split("T")[0] ===
+        (chronologicalScans[0].completedAt || chronologicalScans[0].createdAt)
+          .toISOString()
+          .split("T")[0]
+    );
+
+  return chronologicalScans.map((scan) => {
+    const validResults = scan.results.filter((r) => r.error === null);
+    const totalValidChecks = validResults.length;
+
+    const primaryMentions = validResults.filter((r) => r.mentioned).length;
+    const primaryVisibility = totalValidChecks > 0
+      ? Math.round((primaryMentions / totalValidChecks) * 1000) / 10
+      : 0;
+
+    const brands: BrandVisibilityPoint[] = [
+      {
+        brandName: primaryBrandName,
+        isPrimary: true,
+        color: "#10b981",
+        visibilityPercent: primaryVisibility,
+      },
+    ];
+
+    for (const compName of topCompetitorNames) {
+      let compMentions = 0;
+      for (const r of validResults) {
+        if (Array.isArray(r.competitorsMentioned)) {
+          const mentioned = (r.competitorsMentioned as { name?: unknown }[]).some(
+            (c) => typeof c?.name === "string" && c.name.trim().toLowerCase() === compName.toLowerCase()
+          );
+          if (mentioned) compMentions += 1;
+        }
+      }
+
+      const compVisibility = totalValidChecks > 0
+        ? Math.round((compMentions / totalValidChecks) * 1000) / 10
+        : 0;
+
+      brands.push({
+        brandName: compName,
+        isPrimary: false,
+        color: competitorColorMap.get(compName) || "#a1a1aa",
+        visibilityPercent: compVisibility,
+      });
+    }
+
+    const scanDate = scan.completedAt || scan.createdAt;
+    const dateStr = scanDate.toISOString().split("T")[0];
+    const formattedDate = allSameDay
+      ? scanDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+      : scanDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+    return {
+      scanId: scan.id,
+      date: dateStr,
+      formattedDate,
+      brands,
+    };
+  });
+}
+
+/** Get competitor leaderboard rows for a scan */
+export async function getCompetitorLeaderboard(scanId: string | null): Promise<CompetitorLeaderboardRow[]> {
+  if (!scanId) return [];
+
+  const results = await prisma.scanResult.findMany({
+    where: { scanId, error: null },
+  });
+
+  const totalValidChecks = results.length;
+  if (totalValidChecks === 0) return [];
+
+  const compStats = new Map<
+    string,
+    {
+      name: string;
+      mentions: number;
+      sentiments: number[];
+      positions: number[];
+    }
+  >();
+
+  for (const r of results) {
+    if (Array.isArray(r.competitorsMentioned)) {
+      for (const item of r.competitorsMentioned as { name?: unknown; position?: unknown; sentiment?: unknown }[]) {
+        if (typeof item?.name === "string" && item.name.trim().length > 0) {
+          const cName = item.name.trim();
+          let entry = compStats.get(cName);
+          if (!entry) {
+            entry = { name: cName, mentions: 0, sentiments: [], positions: [] };
+            compStats.set(cName, entry);
+          }
+          entry.mentions += 1;
+
+          if (typeof item.sentiment === "string") {
+            const upper = item.sentiment.toUpperCase();
+            if (upper === "POSITIVE") entry.sentiments.push(85);
+            else if (upper === "NEGATIVE") entry.sentiments.push(15);
+            else entry.sentiments.push(50);
+          } else if (typeof item.sentiment === "number") {
+            entry.sentiments.push(Math.min(100, Math.max(0, item.sentiment)));
+          } else {
+            entry.sentiments.push(50);
+          }
+
+          if (typeof item.position === "number" && item.position > 0) {
+            entry.positions.push(item.position);
+          }
+        }
+      }
+    }
+  }
+
+  const rows: CompetitorLeaderboardRow[] = Array.from(compStats.values()).map((stat) => {
+    const visibilityPercent = Math.round((stat.mentions / totalValidChecks) * 100);
+    const avgSentiment = stat.sentiments.length > 0
+      ? Math.round(stat.sentiments.reduce((a, b) => a + b, 0) / stat.sentiments.length)
+      : 50;
+    const avgPosition = stat.positions.length > 0
+      ? Math.round((stat.positions.reduce((a, b) => a + b, 0) / stat.positions.length) * 10) / 10
+      : 3.0;
+
+    return {
+      rank: 0,
+      name: stat.name,
+      visibilityPercent,
+      sentimentScore: avgSentiment,
+      averagePosition: avgPosition,
+    };
+  });
+
+  rows.sort((a, b) => {
+    if (b.visibilityPercent !== a.visibilityPercent) return b.visibilityPercent - a.visibilityPercent;
+    if (b.sentimentScore !== a.sentimentScore) return b.sentimentScore - a.sentimentScore;
+    return a.averagePosition - b.averagePosition;
+  });
+
+  rows.forEach((row, index) => {
+    row.rank = index + 1;
+  });
+
+  return rows;
+}
+

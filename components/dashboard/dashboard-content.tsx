@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Scan, AlertTriangle, RefreshCw, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,12 +10,14 @@ import { DashboardHeader } from "./dashboard-header";
 import { VisibilityScoreCard } from "./visibility-score-card";
 import { ScoreFactorBreakdown } from "./score-factor-breakdown";
 import { MentionsOverview } from "./mentions-overview";
-import { TrendGraph } from "./trend-graph";
+import { OverviewFilterBar, type OverviewFilterValues } from "./overview-filter-bar";
+import { VisibilityTrendCard } from "./visibility-trend-card";
+import { CompetitorLeaderboard } from "./competitor-leaderboard";
 import { PromptPerformance } from "./prompt-performance";
-import { CompetitorMentions } from "./competitor-mentions";
 import { RecommendationsList } from "./recommendations-list";
+import { getDashboardTrend } from "@/lib/api/dashboard";
 
-import type { DashboardData } from "@/lib/db/dashboard";
+import type { DashboardData, MultiBrandTrendPoint } from "@/lib/db/dashboard";
 
 export interface DashboardContentProps {
   company: {
@@ -29,6 +31,31 @@ export interface DashboardContentProps {
 export function DashboardContent({ company, data }: DashboardContentProps) {
   const router = useRouter();
   const { openDialog } = useDialogs();
+
+  // Filter state for Overview
+  const [filters, setFilters] = useState<OverviewFilterValues>({
+    days: 14,
+    provider: "all",
+  });
+  const [fetchedTrend, setFetchedTrend] = useState<MultiBrandTrendPoint[] | null>(null);
+
+  // Refetch trend when filters change
+  useEffect(() => {
+    let isMounted = true;
+    getDashboardTrend(filters.days, filters.provider)
+      .then((trend) => {
+        if (isMounted) setFetchedTrend(trend);
+      })
+      .catch(() => {
+        // Silently preserve current trend on fetch error
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [filters]);
+
+  const activeTrend = fetchedTrend ?? data?.multiBrandTrend ?? [];
 
   // Combine company info from prop or data
   const currentCompany = data?.company || company;
@@ -167,6 +194,14 @@ export function DashboardContent({ company, data }: DashboardContentProps) {
         onRemoveDomain={handleRemoveDomain}
       />
 
+      {/* Filter Bar (Brand, Date Range, AI Model) */}
+      <OverviewFilterBar
+        companyName={currentCompany.name}
+        selectedDays={filters.days}
+        selectedProvider={filters.provider}
+        onChange={setFilters}
+      />
+
       {/* In-Progress Scan Banner */}
       {isScanRunning && (
         <div className="flex items-center justify-between gap-4 rounded-lg border border-primary/40 bg-primary/10 px-4 py-3 text-xs text-primary-foreground" role="status">
@@ -197,14 +232,14 @@ export function DashboardContent({ company, data }: DashboardContentProps) {
         latestScan={latestScan}
       />
 
-      {/* Content Grid: History, Prompts, Competitors, Recommendations */}
+      {/* Overview Content Grid: Multi-Brand Visibility Trend & Competitor Leaderboard */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TrendGraph
-          trend={data?.trend || []}
+        <VisibilityTrendCard
+          trend={activeTrend}
           onRunScan={handleRunScan}
         />
-        <CompetitorMentions
-          competitors={data?.competitorMentions || []}
+        <CompetitorLeaderboard
+          competitors={data?.competitorLeaderboard || []}
           hasScanData={hasCompletedScan}
         />
       </div>
@@ -221,3 +256,4 @@ export function DashboardContent({ company, data }: DashboardContentProps) {
     </div>
   );
 }
+
