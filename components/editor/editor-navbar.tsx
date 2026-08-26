@@ -10,6 +10,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ModelsTab } from "./models-tab";
 
 export interface EditorNavbarProps {
   isOpen: boolean;
@@ -67,9 +68,9 @@ export function EditorNavbar({
         )}
       </div>
 
-      {/* Center Section (Reserved) */}
+      {/* Center Section — All Models tab (spec 18) */}
       <div className="hidden md:flex flex-1 items-center justify-center max-w-md px-4">
-        {/* Reserved for future Search / Command Palette */}
+        <ModelsTab />
       </div>
 
       {/* Right Section */}

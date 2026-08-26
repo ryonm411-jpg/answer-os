@@ -3,8 +3,12 @@ import { auth } from "@clerk/nextjs/server";
 import { tasks } from "@trigger.dev/sdk";
 import { prisma } from "@/lib/db/prisma";
 import { getCompanyByClerkId } from "@/lib/db/companies";
+import { getEnabledProviders } from "@/lib/db/provider-preferences";
 import { hasActiveSubscription } from "@/lib/db/subscriptions";
-import { getAvailableProviders, resolveAllowedProviders } from "@/lib/providers";
+import {
+  getAvailableProviders,
+  resolveEffectiveProviders,
+} from "@/lib/providers";
 import type { runScan } from "@/lib/jobs/scan";
 
 /**
@@ -29,10 +33,24 @@ export async function POST() {
     );
   }
 
-  // Server-side entitlement check: resolve allowed provider set (spec 17, Decision #4)
+  // Server-side entitlement + user preference: effective provider set (spec 18, §10.1)
   const isEntitled = await hasActiveSubscription(company.id);
   const configured = getAvailableProviders().map((p) => p.name);
-  const providers = resolveAllowedProviders({ entitled: isEntitled, configured });
+  const enabled = await getEnabledProviders(company.id);
+  const providers = resolveEffectiveProviders({ entitled: isEntitled, configured, enabled });
+
+  // User-caused empty set (preference row disables everything) is recoverable via the All Models tab
+  if (providers.length === 0 && enabled !== null) {
+    return NextResponse.json(
+      {
+        error: {
+          message:
+            "Enable at least one AI model in the All Models tab to run a scan.",
+        },
+      },
+      { status: 422 }
+    );
+  }
 
   // Stale-PENDING recovery (12, Decision #11): a trigger that was accepted but
   // never dequeued must not block future scans forever.

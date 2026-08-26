@@ -69,11 +69,11 @@ enum SubscriptionStatus {
 }
 
 model Company {
-  id                 String           @id @default(cuid())
-  userId             String           @unique
-  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   name               String
-  domain             String           @unique
+  domain             String             @unique
   industry           String?
   productDescription String?
   competitors        Competitor[]
@@ -81,8 +81,18 @@ model Company {
   scans              Scan[]
   recommendations    Recommendation[]
   subscription       Subscription?
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  providerPreference ProviderPreference?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+}
+
+model ProviderPreference {
+  id               String       @id @default(cuid())
+  companyId        String       @unique
+  company          Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  enabledProviders AIProvider[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
 }
 
 model Subscription {

@@ -1,13 +1,14 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getCompanyByClerkId } from "@/lib/db/companies";
+import { getEnabledProviders } from "@/lib/db/provider-preferences";
 import { hasActiveSubscription } from "@/lib/db/subscriptions";
 import { addNewAiSuggestions } from "@/lib/db/prompts";
 import { prisma } from "@/lib/db/prisma";
 import {
   getAvailableProviders,
   getProvider,
-  resolveAllowedProviders,
+  resolveEffectiveProviders,
 } from "@/lib/providers";
 import { generatePromptSuggestions } from "@/lib/prompts/generator";
 import { PromptGenerationError } from "@/lib/prompts/errors";
@@ -30,12 +31,27 @@ export async function POST(req: Request) {
     );
   }
 
-  // Server-side entitlement check: resolve allowed provider set (spec 17, Decision #6)
+  // Server-side entitlement + user preference: effective provider set (spec 18, §10.2).
+  // No fallback to all-configured providers — premium must never run unpaid (spec 17, Decision #6).
   const isEntitled = await hasActiveSubscription(company.id);
   const configured = getAvailableProviders().map((p) => p.name);
-  const allowedNames = resolveAllowedProviders({ entitled: isEntitled, configured });
-  const providerNames = allowedNames.length > 0 ? allowedNames : configured;
-  const providers = providerNames.map((name) => getProvider(name));
+  const enabled = await getEnabledProviders(company.id);
+  const effectiveNames = resolveEffectiveProviders({ entitled: isEntitled, configured, enabled });
+
+  // User-caused empty set (preference row disables everything) is recoverable via the All Models tab
+  if (effectiveNames.length === 0 && enabled !== null) {
+    return NextResponse.json(
+      {
+        error: {
+          message:
+            "Enable at least one AI model in the All Models tab to generate prompts.",
+        },
+      },
+      { status: 422 }
+    );
+  }
+
+  const providers = effectiveNames.map((name) => getProvider(name));
 
   // Refuse generation while scan is active
   const activeScan = await prisma.scan.findFirst({

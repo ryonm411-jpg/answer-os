@@ -1,15 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  DEFAULT_MAX_TOKENS,
   DEFAULT_MODELS,
-  DEFAULT_TEMPERATURE,
-  DEFAULT_TIMEOUT_MS,
   geminiApiKey,
   groqApiKey,
   nvidiaApiKey,
-  openaiApiKey,
   openrouterApiKey,
-  resolveModel,
 } from "./config";
 import { TO_PRISMA_PROVIDER } from "./types";
 

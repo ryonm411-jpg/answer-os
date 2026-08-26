@@ -160,10 +160,16 @@ describe("generatePromptSuggestions", () => {
   });
 
   it("throws PromptGenerationError when no provider is configured", async () => {
+    // Pin mocks off so configuration is judged purely by API keys (registry.ts
+    // short-circuits when USE_MOCK_PROVIDERS=true regardless of the stubs below).
+    vi.stubEnv("USE_MOCK_PROVIDERS", "false");
     vi.stubEnv("OPENAI_API_KEY", "");
     vi.stubEnv("ANTHROPIC_API_KEY", "");
     vi.stubEnv("GEMINI_API_KEY", "");
     vi.stubEnv("PERPLEXITY_API_KEY", "");
+    vi.stubEnv("GROQ_API_KEY", "");
+    vi.stubEnv("NVIDIA_NIM_API_KEY", "");
+    vi.stubEnv("OPEN_ROUTER_API_KEY", "");
 
     await expect(
       generatePromptSuggestions({

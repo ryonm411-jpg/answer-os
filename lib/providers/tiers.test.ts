@@ -4,6 +4,7 @@ import {
   FREE_PROVIDERS,
   PREMIUM_PROVIDERS,
   resolveAllowedProviders,
+  resolveEffectiveProviders,
 } from "./tiers";
 import type { AIProviderName } from "./types";
 
@@ -83,6 +84,81 @@ describe("lib/providers/tiers", () => {
         "anthropic",
         "perplexity",
       ]);
+    });
+  });
+
+  describe("resolveEffectiveProviders", () => {
+    const allConfigured: AIProviderName[] = [
+      "openai",
+      "gemini",
+      "groq",
+      "nvidia",
+      "openrouter",
+      "anthropic",
+      "perplexity",
+    ];
+
+    it("returns the tier default when no preference row exists (enabled: null)", () => {
+      const effective = resolveEffectiveProviders({
+        entitled: false,
+        configured: allConfigured,
+        enabled: null,
+      });
+      expect(effective).toEqual(FREE_PROVIDERS);
+    });
+
+    it("returns all configured providers when paid and no preference row exists", () => {
+      const effective = resolveEffectiveProviders({
+        entitled: true,
+        configured: allConfigured,
+        enabled: null,
+      });
+      expect(effective).toEqual(allConfigured);
+    });
+
+    it("narrows the tier-allowed set to the stored selection", () => {
+      const effective = resolveEffectiveProviders({
+        entitled: false,
+        configured: allConfigured,
+        enabled: ["gemini", "groq"],
+      });
+      expect(effective).toEqual(["gemini", "groq"]);
+    });
+
+    it("excludes premium providers while unpaid even when stored", () => {
+      const effective = resolveEffectiveProviders({
+        entitled: false,
+        configured: allConfigured,
+        enabled: ["gemini", "anthropic", "perplexity"],
+      });
+      expect(effective).toEqual(["gemini"]);
+    });
+
+    it("excludes unconfigured providers", () => {
+      const effective = resolveEffectiveProviders({
+        entitled: true,
+        configured: ["gemini", "anthropic"],
+        enabled: ["gemini", "groq", "anthropic"],
+      });
+      expect(effective).toEqual(["gemini", "anthropic"]);
+    });
+
+    it("does not auto-add premium providers to a stored row on an entitled flip", () => {
+      const effective = resolveEffectiveProviders({
+        entitled: true,
+        configured: allConfigured,
+        enabled: ["gemini", "groq"],
+      });
+      expect(effective).toEqual(["gemini", "groq"]);
+    });
+
+    it("returns an empty array when the stored selection is empty", () => {
+      const effective = resolveEffectiveProviders({
+        entitled: false,
+        configured: allConfigured,
+        enabled: [],
+      });
+      expect(effective).toEqual([]);
     });
   });
 });

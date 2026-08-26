@@ -3,67 +3,20 @@
 import * as React from "react";
 import { Check, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { AIProviderName } from "@/lib/providers";
-
-export interface ProviderAccessItem {
-  name: AIProviderName;
-  label: string;
-  description: string;
-  isFreeTier: boolean;
-}
-
-const PROVIDERS_LIST: ProviderAccessItem[] = [
-  {
-    name: "gemini",
-    label: "Google Gemini",
-    description: "Gemini 2.5 / 3.5 Flash search integration (1,500 RPD free)",
-    isFreeTier: true,
-  },
-  {
-    name: "groq",
-    label: "Groq LPU",
-    description: "Ultra-fast LPU inference (Llama 3.3 70B & Qwen, 1,000 RPD free)",
-    isFreeTier: true,
-  },
-  {
-    name: "nvidia",
-    label: "NVIDIA NIM",
-    description: "Enterprise NIM catalog (10,000 RPD free)",
-    isFreeTier: true,
-  },
-  {
-    name: "openrouter",
-    label: "OpenRouter Free Pool",
-    description: "Open-weight free model router (15+ free models)",
-    isFreeTier: true,
-  },
-  {
-    name: "openai",
-    label: "OpenAI ChatGPT",
-    description: "GPT-4o general AI model scanning",
-    isFreeTier: false,
-  },
-  {
-    name: "anthropic",
-    label: "Anthropic Claude",
-    description: "Claude 3.5 Sonnet analysis & recommendations",
-    isFreeTier: false,
-  },
-  {
-    name: "perplexity",
-    label: "Perplexity AI",
-    description: "Sonar real-time answer engine search",
-    isFreeTier: false,
-  },
-];
+import { PROVIDER_CATALOG } from "@/lib/providers/catalog";
+import { PREMIUM_PROVIDERS } from "@/lib/providers/tiers";
 
 export interface ProviderAccessListProps {
   entitled: boolean;
 }
 
 export function ProviderAccessList({ entitled }: ProviderAccessListProps) {
-  const freeCount = PROVIDERS_LIST.filter((p) => p.isFreeTier).length;
-  const totalCount = PROVIDERS_LIST.length;
+  const providers = PROVIDER_CATALOG.map((entry) => ({
+    ...entry,
+    isFreeTier: !PREMIUM_PROVIDERS.includes(entry.name),
+  }));
+  const freeCount = providers.filter((p) => p.isFreeTier).length;
+  const totalCount = providers.length;
 
   return (
     <div className="space-y-4">
@@ -79,7 +32,7 @@ export function ProviderAccessList({ entitled }: ProviderAccessListProps) {
       </div>
 
       <div className="grid grid-cols-1 gap-2.5">
-        {PROVIDERS_LIST.map((p) => {
+        {providers.map((p) => {
           const isUnlocked = entitled || p.isFreeTier;
 
           return (
