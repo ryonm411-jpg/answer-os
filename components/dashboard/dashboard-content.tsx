@@ -13,11 +13,14 @@ import { MentionsOverview } from "./mentions-overview";
 import { OverviewFilterBar, type OverviewFilterValues } from "./overview-filter-bar";
 import { VisibilityTrendCard } from "./visibility-trend-card";
 import { CompetitorLeaderboard } from "./competitor-leaderboard";
+import { TopSourcesCard } from "./top-sources-card";
+import { SourcesDomainTable } from "./sources-domain-table";
 import { PromptPerformance } from "./prompt-performance";
 import { RecommendationsList } from "./recommendations-list";
-import { getDashboardTrend } from "@/lib/api/dashboard";
+import { getDashboardTrend, getDashboardSources } from "@/lib/api/dashboard";
 
 import type { DashboardData, MultiBrandTrendPoint } from "@/lib/db/dashboard";
+import type { SourcesSummaryData } from "@/lib/db/sources";
 
 export interface DashboardContentProps {
   company: {
@@ -38,22 +41,30 @@ export function DashboardContent({ company, data }: DashboardContentProps) {
     provider: "all",
   });
   const [fetchedTrend, setFetchedTrend] = useState<MultiBrandTrendPoint[] | null>(null);
+  const [sourcesData, setSourcesData] = useState<SourcesSummaryData | null>(null);
 
-  // Refetch trend when filters change
+  // Refetch trend & sources when filters change
   useEffect(() => {
     let isMounted = true;
-    getDashboardTrend(filters.days, filters.provider)
-      .then((trend) => {
-        if (isMounted) setFetchedTrend(trend);
+
+    Promise.all([
+      getDashboardTrend(filters.days, filters.provider),
+      getDashboardSources(filters.days, filters.provider, data?.latestCompletedScanId),
+    ])
+      .then(([trend, sources]) => {
+        if (isMounted) {
+          setFetchedTrend(trend);
+          setSourcesData(sources);
+        }
       })
-      .catch(() => {
-        // Silently preserve current trend on fetch error
+      .catch((err) => {
+        console.error("[DashboardContent] Failed to fetch trend/sources:", err);
       });
 
     return () => {
       isMounted = false;
     };
-  }, [filters]);
+  }, [filters, data?.latestCompletedScanId]);
 
   const activeTrend = fetchedTrend ?? data?.multiBrandTrend ?? [];
 
@@ -232,7 +243,7 @@ export function DashboardContent({ company, data }: DashboardContentProps) {
         latestScan={latestScan}
       />
 
-      {/* Overview Content Grid: Multi-Brand Visibility Trend & Competitor Leaderboard */}
+      {/* Multi-Brand Visibility Trend & Competitor Leaderboard */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <VisibilityTrendCard
           trend={activeTrend}
@@ -244,6 +255,18 @@ export function DashboardContent({ company, data }: DashboardContentProps) {
         />
       </div>
 
+      {/* Top Sources & Domain Citations Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TopSourcesCard
+          totalSourcesCount={sourcesData?.totalSourcesCount ?? 0}
+          breakdown={sourcesData?.breakdown ?? []}
+        />
+        <SourcesDomainTable
+          domains={sourcesData?.topDomains ?? []}
+        />
+      </div>
+
+      {/* Prompts & Recommendations Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <PromptPerformance
           topPrompts={data?.promptPerformance?.topPrompts || []}
@@ -256,4 +279,3 @@ export function DashboardContent({ company, data }: DashboardContentProps) {
     </div>
   );
 }
-

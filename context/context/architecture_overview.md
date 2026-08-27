@@ -117,6 +117,11 @@ graph TD
 | [`app/api/scans/route.ts`](file:///c:/Users/Ryon/Downloads/answer-os/app/api/scans/route.ts) | HTTP endpoint to validate request and trigger scan jobs. | Frontend modal (`RunScanDialog`) |
 | [`lib/jobs/scan.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/jobs/scan.ts) | Orchestrates background scan execution loop across prompts & providers. | Trigger.dev Engine |
 | [`lib/scan/prompt.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/scan/prompt.ts) | Interpolates buyer questions and metadata extraction rules. | Scan Job (`lib/jobs/scan.ts`) |
+| [`lib/scan/citations.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/scan/citations.ts) | Domain extraction (`extractCitations`) & taxonomy classification (`classifyDomain`: `YOU`, `COMPETITOR`, `CORPORATE`, `EDITORIAL`, `UGC`, `OTHER`). | Scan Job & DB Results |
+| [`lib/db/sources.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/db/sources.ts) | Aggregates citation records for Donut Chart (`SourceTypeBreakdown`) and Domain Leaderboard (`DomainCitationRow`). | Sources API (`app/api/dashboard/sources/route.ts`) |
+| [`app/api/dashboard/sources/route.ts`](file:///c:/Users/Ryon/Downloads/answer-os/app/api/dashboard/sources/route.ts) | REST API endpoint returning top sources breakdown and domain leaderboard data. | Dashboard UI Components |
+| [`components/dashboard/top-sources-card.tsx`](file:///c:/Users/Ryon/Downloads/answer-os/components/dashboard/top-sources-card.tsx) | Donut SVG chart visualizer component with center total source counter and category legend. | Dashboard Content |
+| [`components/dashboard/sources-domain-table.tsx`](file:///c:/Users/Ryon/Downloads/answer-os/components/dashboard/sources-domain-table.tsx) | Domain citations leaderboard table displaying favicons, `Used (%)`, `Avg. Citations`, and type badges. | Dashboard Content |
 | [`lib/scan/parse.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/scan/parse.ts) | Extracts & normalizes JSON metadata from unstructured AI responses. | Scan Job (`lib/jobs/scan.ts`) |
 | [`lib/scoring/weights.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/scoring/weights.ts) | Defines factor weight constants (mention rate 30%, rank 25%, sentiment 20%, competitor share 15%, source authority 10%). | Score Calculator (`lib/scoring/calculator.ts`) |
 | [`lib/scoring/calculator.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/scoring/calculator.ts) | Pure Prisma-free multi-factor visibility score calculator engine. | DB Scoring Helper (`lib/db/scoring.ts`) |
@@ -125,7 +130,7 @@ graph TD
 | [`components/dashboard/dashboard-content.tsx`](file:///c:/Users/Ryon/Downloads/answer-os/components/dashboard/dashboard-content.tsx) | Client Component boundary managing workspace UI states (No Company, First Scan CTA, Scanning Banner, Full Grid). | Editor Page (`app/(editor)/editor/page.tsx`) |
 | [`lib/utils/cache.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/utils/cache.ts) | Handles 24-hour Upstash Redis caching over REST HTTP. | Scan Job (`lib/jobs/scan.ts`) |
 | [`lib/providers/registry.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/providers/registry.ts) | Inspects API key environment variables and returns active AI providers. | Scan Job & Prompt Generator |
-| [`lib/db/results.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/db/results.ts) | Handles database deletion and batch-creation of `ScanResult` rows. | Scan Job (`lib/jobs/scan.ts`) |
+| [`lib/db/results.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/db/results.ts) | Handles database deletion and batch-creation of `ScanResult` & `ScanResultCitation` rows. | Scan Job (`lib/jobs/scan.ts`) |
 
 ---
 

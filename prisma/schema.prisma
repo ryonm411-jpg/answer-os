@@ -133,12 +133,21 @@ model Scan {
   @@index([companyId])
 }
 
+enum CitationType {
+  YOU
+  COMPETITOR
+  CORPORATE
+  EDITORIAL
+  UGC
+  OTHER
+}
+
 model ScanResult {
-  id                   String     @id @default(cuid())
+  id                   String               @id @default(cuid())
   scanId               String
-  scan                 Scan       @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  scan                 Scan                 @relation(fields: [scanId], references: [id], onDelete: Cascade)
   promptId             String
-  prompt               Prompt     @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  prompt               Prompt               @relation(fields: [promptId], references: [id], onDelete: Cascade)
   provider             AIProvider
   mentioned            Boolean
   position             Int?
@@ -146,11 +155,27 @@ model ScanResult {
   reasoning            String?
   rawResponse          String?
   competitorsMentioned Json?
-  error                String?    // non-null ⇔ this prompt×provider check failed; mentioned is then always false
-  createdAt            DateTime   @default(now())
+  error                String?              // non-null ⇔ this prompt×provider check failed; mentioned is then always false
+  citations            ScanResultCitation[]
+  createdAt            DateTime             @default(now())
 
   @@index([scanId])
   @@index([promptId])
+}
+
+model ScanResultCitation {
+  id           String       @id @default(cuid())
+  scanResultId String
+  scanResult   ScanResult   @relation(fields: [scanResultId], references: [id], onDelete: Cascade)
+  domain       String       // Normalized domain, e.g. "reddit.com"
+  url          String?      // Exact target URL if present
+  title        String?      // Source page title if provided by AI search grounding
+  citationType CitationType @default(OTHER)
+  createdAt    DateTime     @default(now())
+
+  @@index([scanResultId])
+  @@index([domain])
+  @@index([citationType])
 }
 
 model Prompt {

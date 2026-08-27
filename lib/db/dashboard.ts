@@ -36,6 +36,11 @@ export interface DashboardTrendPoint {
   score: number | null;
 }
 
+export interface ProviderMetricItem {
+  name: string;
+  model: string;
+}
+
 export interface LatestScanSummary {
   id: string;
   status: "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
@@ -45,6 +50,7 @@ export interface LatestScanSummary {
   validChecks: number;
   errorChecks: number;
   coverageRate: number; // 0..1 valid checks ratio
+  activeProviders?: ProviderMetricItem[];
 }
 
 export interface BrandVisibilityPoint {
@@ -107,6 +113,10 @@ export async function getLatestScanForCompany(companyId: string): Promise<Latest
     where: { companyId },
     orderBy: { createdAt: "desc" },
     include: {
+      results: {
+        select: { provider: true },
+        distinct: ["provider"],
+      },
       _count: {
         select: { results: true },
       },
@@ -123,6 +133,20 @@ export async function getLatestScanForCompany(companyId: string): Promise<Latest
   const errorChecks = Math.max(0, totalChecks - validChecks);
   const coverageRate = totalChecks > 0 ? validChecks / totalChecks : 1.0;
 
+  const PRISMA_TO_PROVIDER_ITEM: Record<string, ProviderMetricItem> = {
+    OPENAI: { name: "ChatGPT", model: "OpenAI" },
+    ANTHROPIC: { name: "Claude", model: "Anthropic" },
+    GEMINI: { name: "Gemini", model: "Google" },
+    PERPLEXITY: { name: "Perplexity", model: "Sonar" },
+    GROQ: { name: "Groq LPU", model: "Llama 3.3 70B" },
+    NVIDIA: { name: "NVIDIA NIM", model: "Enterprise NIM" },
+    OPENROUTER: { name: "OpenRouter", model: "Free Pool" },
+  };
+
+  const activeProviders = scan.results
+    .map((r) => PRISMA_TO_PROVIDER_ITEM[r.provider as string])
+    .filter(Boolean) as ProviderMetricItem[];
+
   return {
     id: scan.id,
     status: scan.status,
@@ -132,6 +156,7 @@ export async function getLatestScanForCompany(companyId: string): Promise<Latest
     validChecks,
     errorChecks,
     coverageRate,
+    activeProviders,
   };
 }
 

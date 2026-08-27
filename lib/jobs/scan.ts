@@ -46,13 +46,16 @@ async function askWithRetry(provider: AIProvider, prompt: string): Promise<AIRes
   throw lastError; // unreachable — TS exhaustiveness
 }
 
+import { extractCitations } from "@/lib/scan/citations";
+
 /** One provider × prompt check → one ScanResultInput (Decision #7, #8, #9). */
 async function scanPrompt(input: {
   provider: AIProvider;
   prompt: { id: string; text: string };
-  company: { id: string; name: string; domain: string };
+  company: { id: string; name: string; domain: string; competitors?: Array<{ domain: string }> };
 }): Promise<ScanResultInput> {
   const { provider, prompt, company } = input;
+  const competitorDomains = company.competitors?.map((c) => c.domain) ?? [];
   const prismaProvider = TO_PRISMA_PROVIDER[provider.name] as import("@/generated/prisma").AIProvider;
   const providerKey =
     process.env.USE_MOCK_PROVIDERS === "true" ? `mock:${provider.name}` : provider.name;
@@ -71,6 +74,7 @@ async function scanPrompt(input: {
       rawResponse: null, // only the parsed result is cached (Decision #7)
       competitorsMentioned: cached.competitors,
       error: null,
+      citations: [],
     };
   }
 
@@ -82,6 +86,12 @@ async function scanPrompt(input: {
         companyName: company.name,
         companyDomain: company.domain,
       })
+    );
+
+    const citations = extractCitations(
+      response.content,
+      company.domain,
+      competitorDomains
     );
 
     const parsed = parseScanResponse(response.content);
@@ -97,6 +107,7 @@ async function scanPrompt(input: {
         rawResponse: response.content,
         competitorsMentioned: null,
         error: parsed.error,
+        citations,
       };
     }
 
@@ -113,11 +124,9 @@ async function scanPrompt(input: {
       rawResponse: response.content,
       competitorsMentioned: parsed.data.competitors,
       error: null,
+      citations,
     };
   } catch (error) {
-    // Provider Integration Checklist #6: provider failures surface as error rows,
-    // never unhandled exceptions. Anything that isn't an AIProviderError is
-    // unexpected and fails the scan (retried by the SDK).
     if (error instanceof AIProviderError) {
       return {
         promptId: prompt.id,
@@ -129,6 +138,7 @@ async function scanPrompt(input: {
         rawResponse: null,
         competitorsMentioned: null,
         error: error.message,
+        citations: [],
       };
     }
     throw error;
@@ -145,7 +155,7 @@ export const runScan = task({
 
     const scan = await prisma.scan.findUnique({
       where: { id: scanId },
-      include: { company: true },
+      include: { company: { include: { competitors: true } } },
     });
     if (!scan) throw new AbortTaskRunError("Scan not found");
 
@@ -179,12 +189,15 @@ export const runScan = task({
         }
       }
 
-      // Execute in bounded parallel batches (concurrency = 5) to prevent 30-minute sequential bottlenecks
+      // Execute in bounded parallel batches (concurrency = 5) with inter-batch delay to respect provider rate limits
       const BATCH_SIZE = 5;
       for (let i = 0; i < scanTasks.length; i += BATCH_SIZE) {
         const batch = scanTasks.slice(i, i + BATCH_SIZE).map((fn) => fn());
         const batchResults = await Promise.all(batch);
         results.push(...batchResults);
+        if (i + BATCH_SIZE < scanTasks.length) {
+          await sleep(1500); // Inter-batch delay to avoid rate limit spikes (e.g. Gemini free tier 5 RPM)
+        }
       }
 
       await createScanResults(scanId, results);

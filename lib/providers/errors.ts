@@ -57,7 +57,9 @@ export function toProviderError(
     if (
       statusCode === 429 ||
       message.includes("429") ||
-      message.toLowerCase().includes("rate limit")
+      message.toLowerCase().includes("rate limit") ||
+      message.toLowerCase().includes("quota") ||
+      message.toLowerCase().includes("resource_exhausted")
     ) {
       return new AIProviderError(`Provider ${provider} rate limit exceeded: ${message}`, {
         provider,

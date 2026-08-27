@@ -90,6 +90,18 @@ Update this file after every meaningful implementation change.
     3. Updated `getMultiBrandScoreHistory` in `lib/db/dashboard.ts` to format X-axis labels as exact timestamps (`"10:27 PM"`, `"11:07 PM"`) when multiple scans occur on the same calendar day.
     4. Added `mock:` namespace prefix to Upstash Redis cache keys in `lib/jobs/scan.ts` during mock provider runs, isolating mock results from live API scans.
     5. Aligned default model identifiers in `lib/providers/config.ts` (`gemini-3.6-flash`, `llama-3.3-70b-versatile`, `openrouter/auto`) and `lib/providers/config.test.ts` (108 unit tests passing across 19 test files).
+- Implemented Top Sources & Domain Citations Analytics (`context/features-specs/20-top-sources-and-domain-citations.md`):
+    1. Added `CitationType` enum and `ScanResultCitation` model to `prisma/schema.prisma` (`npx prisma db push` applied).
+    2. Implemented citation extraction & domain classification module `lib/scan/citations.ts` (`normalizeDomain`, `classifyDomain`, `extractCitations`).
+    3. Updated scan result persistence in `lib/db/results.ts` and `lib/jobs/scan.ts` to automatically extract and persist domain citations during scan execution.
+    4. Built database aggregation helper `lib/db/sources.ts` (`getSourcesSummary`).
+    5. Created REST API endpoint `GET /api/dashboard/sources` in `app/api/dashboard/sources/route.ts` with Clerk authentication and query parameter filtering (`days`, `provider`, `scanId`).
+    6. Added client API fetch helper `getDashboardSources` in `lib/api/dashboard.ts`.
+    7. Built `TopSourcesCard` component (`components/dashboard/top-sources-card.tsx`) rendering responsive SVG Donut Chart with center total counter and category legend dots (`Corporate`, `Editorial`, `UGC`, `Other`).
+    8. Built `SourcesDomainTable` component (`components/dashboard/sources-domain-table.tsx`) displaying rank, favicon, `Used (%)`, `Avg. Citations`, and type badges (`You`, `Competitor`, `UGC`, `Editorial`, `Corporate`, `Other`).
+    9. Built `SourcesModal` dialog component (`components/dashboard/sources-modal.tsx`) providing full searchable/filterable drawer for all discovered domain sources.
+    10. Integrated `TopSourcesCard` & `SourcesDomainTable` into `components/dashboard/dashboard-content.tsx`.
+    11. Added unit test suites (`lib/scan/citations.test.ts`, `lib/db/sources.test.ts`) — 119 unit tests passing across 21 test files; `npx tsc --noEmit` clean.
 
 ## In Progress
 
