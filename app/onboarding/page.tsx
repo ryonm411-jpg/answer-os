@@ -2,6 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { getCompanyByClerkId } from "@/lib/db/companies";
 import { OnboardingForm } from "@/components/onboarding/onboarding-form";
+import { trackEvent } from "@/lib/analytics/posthog";
+import { EVENTS } from "@/lib/analytics/events";
 
 export const metadata = {
   title: "Get Started — AnswerOS",
@@ -17,6 +19,10 @@ export default async function OnboardingPage() {
   if (company) {
     redirect("/editor");
   }
+
+  // USER_SIGNED_UP: /onboarding is the post-sign-up landing page (afterSignUpUrl
+  // hook per spec 21). Newly authenticated users without a company land here.
+  trackEvent(EVENTS.USER_SIGNED_UP, clerkId);
 
   return <OnboardingForm />;
 }

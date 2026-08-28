@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { PostHogIdentify } from "@/lib/analytics/posthog-identify";
+import { ErrorBoundary } from "@sentry/nextjs";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -40,14 +42,17 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider appearance={{ theme: dark }} localization={localization}>
-      <html
-        lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
-      >
-        <body className="min-h-full flex flex-col bg-background text-foreground">
-          <TooltipProvider>{children}</TooltipProvider>
-        </body>
-      </html>
+      <PostHogIdentify />
+      <ErrorBoundary fallback={<div>Something went wrong.</div>}>
+        <html
+          lang="en"
+          className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
+        >
+          <body className="min-h-full flex flex-col bg-background text-foreground">
+            <TooltipProvider>{children}</TooltipProvider>
+          </body>
+        </html>
+      </ErrorBoundary>
     </ClerkProvider>
   );
 }

@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { normalizeDomain, validateDomain } from "@/lib/utils/domain";
 import { createCompany } from "@/lib/api/domain";
+import posthog from "posthog-js";
+import { EVENTS } from "@/lib/analytics/events"
 
 export function OnboardingForm() {
   const router = useRouter();
@@ -34,6 +36,8 @@ export function OnboardingForm() {
 
     try {
       await createCompany(normalized);
+      // No PII per spec 21: never send domain/name/email as event properties.
+      posthog.capture(EVENTS.ONBOARDING_COMPLETED);
       // Kick off AI prompt generation best-effort (non-blocking)
       fetch("/api/prompts/generate", { method: "POST" }).catch(() => {});
       // Success — navigate to the dashboard (now renders the company state).

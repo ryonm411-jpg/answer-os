@@ -7,6 +7,9 @@ import { calculateOpportunityScore } from "@/lib/scoring/opportunity";
 import { getLatestCompletedScan } from "@/lib/db/scoring";
 import { isValidIntent } from "@/lib/prompts/intent";
 import { prisma } from "@/lib/db/prisma";
+import { trackEvent } from "@/lib/analytics/posthog";
+import { EVENTS } from "@/lib/analytics/events";
+import { captureApiError } from "@/lib/monitoring/sentry";
 
 function normalizeText(text: string): string {
   return text.trim().replace(/\s+/g, " ").toLowerCase();
@@ -155,6 +158,8 @@ export async function POST(req: Request) {
       intent,
     });
 
+    await trackEvent(EVENTS.PROMPT_ADDED, userId, { prompt_id: created.id });
+
     return NextResponse.json(
       {
         data: {
@@ -174,7 +179,8 @@ export async function POST(req: Request) {
       },
       { status: 201 }
     );
-  } catch {
+  } catch (err) {
+    captureApiError(err, "/api/prompts");
     return NextResponse.json(
       { error: { message: "Failed to create custom prompt" } },
       { status: 500 }

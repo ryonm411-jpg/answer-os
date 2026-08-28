@@ -47,6 +47,21 @@ async function askWithRetry(provider: AIProvider, prompt: string): Promise<AIRes
 }
 
 import { extractCitations } from "@/lib/scan/citations";
+import { trackEvent } from "@/lib/analytics/posthog";
+import { EVENTS } from "@/lib/analytics/events";
+import { captureJobError } from "@/lib/monitoring/sentry";
+import * as Sentry from "@sentry/nextjs";
+
+// Trigger.dev workers bundle this file independently and never run Next.js's
+// instrumentation.ts, so initialize Sentry here with the same config so
+// captureJobError() actually reports (spec 21, "Sentry + Trigger.dev").
+// No-op (silently disabled) when SENTRY_DSN is missing.
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.VERCEL_ENV || "development",
+  tracesSampleRate: process.env.VERCEL_ENV === "production" ? 0.1 : 1.0,
+  enabled: process.env.NODE_ENV !== "development" || !!process.env.SENTRY_DSN,
+});
 
 /** One provider × prompt check → one ScanResultInput (Decision #7, #8, #9). */
 async function scanPrompt(input: {
@@ -155,7 +170,9 @@ export const runScan = task({
 
     const scan = await prisma.scan.findUnique({
       where: { id: scanId },
-      include: { company: { include: { competitors: true } } },
+      include: {
+        company: { include: { competitors: true, user: { select: { clerkId: true } } } },
+      },
     });
     if (!scan) throw new AbortTaskRunError("Scan not found");
 
@@ -208,6 +225,14 @@ export const runScan = task({
       });
 
       const failed = results.filter((r) => r.error).length;
+      await trackEvent(EVENTS.SCAN_COMPLETED, scan.company.user.clerkId, {
+        scan_id: scanId,
+        company_id: scan.companyId,
+        prompt_count: prompts.length,
+        provider_count: providers.length,
+        result_count: results.length,
+        failed_count: failed,
+      });
       logger.info("Scan completed", {
         scanId,
         companyId: scan.companyId,
@@ -226,9 +251,13 @@ export const runScan = task({
         failed,
       };
     } catch (error) {
+      captureJobError(error, "scan-company", scanId);
       await prisma.scan.update({
         where: { id: scanId },
         data: { status: "FAILED", completedAt: new Date() },
+      });
+      await trackEvent(EVENTS.SCAN_FAILED, scan.company.user.clerkId, {
+        scan_id: scanId,
       });
       logger.error("Scan failed", { scanId, error });
       throw error; // SDK retry (config default: 3 attempts)

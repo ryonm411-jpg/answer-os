@@ -13,6 +13,9 @@ import {
 import { generatePromptSuggestions } from "@/lib/prompts/generator";
 import { PromptGenerationError } from "@/lib/prompts/errors";
 import { AIProviderError } from "@/lib/providers/errors";
+import { trackEvent } from "@/lib/analytics/posthog";
+import { EVENTS } from "@/lib/analytics/events";
+import { captureApiError } from "@/lib/monitoring/sentry"
 
 export async function POST(req: Request) {
   const { userId } = await auth();
@@ -122,6 +125,8 @@ export async function POST(req: Request) {
     // Additive generation per spec §8 & §22.5: skips duplicates, preserves user edits
     const result = await addNewAiSuggestions(company.id, suggestions);
 
+    await trackEvent(EVENTS.PROMPT_GENERATED, userId, { count: result.count });
+
     return NextResponse.json({
       data: {
         prompts: result.prompts,
@@ -142,6 +147,7 @@ export async function POST(req: Request) {
       );
     }
 
+    captureApiError(err, "/api/prompts/generate", userId);
     return NextResponse.json(
       { error: { message: "Internal server error" } },
       { status: 500 }

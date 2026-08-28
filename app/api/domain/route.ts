@@ -11,6 +11,8 @@ import {
   deleteCompany,
 } from "@/lib/db/companies";
 import type { Company } from "@/generated/prisma";
+import { trackEvent } from "@/lib/analytics/posthog";
+import { EVENTS } from "@/lib/analytics/events";
 
 interface PrismaUniqueConstraintError {
   code: string;
@@ -216,6 +218,8 @@ export async function PATCH(req: Request) {
 
   const updatedCompany = await updateCompanyDomain(company.id, normalizedDomain);
 
+  await trackEvent(EVENTS.DOMAIN_UPDATED, clerkId, { company_id: company.id });
+
   return NextResponse.json({ data: companyData(updatedCompany) });
 }
 
@@ -243,6 +247,8 @@ export async function DELETE() {
   }
 
   await deleteCompany(company.id);
+
+  await trackEvent(EVENTS.DOMAIN_REMOVED, clerkId, { company_id: company.id });
 
   return NextResponse.json({
     data: { message: "Company deleted successfully" },

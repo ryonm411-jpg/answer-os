@@ -18,6 +18,8 @@ import { Label } from "@/components/ui/label";
 import { useDialogs } from "@/hooks/use-dialogs";
 import { normalizeDomain, validateDomain } from "@/lib/utils/domain";
 import { createCompany } from "@/lib/api/domain";
+import posthog from "posthog-js";
+import { EVENTS } from "@/lib/analytics/events"
 
 export function AddDomainDialog() {
   const {
@@ -58,6 +60,8 @@ export function AddDomainDialog() {
     setLoading(true);
     try {
       await createCompany(normalized);
+      // No PII per spec 21: never send domain/name/email as event properties.
+      posthog.capture(EVENTS.DOMAIN_ADDED);
       router.refresh();
       closeDialog();
     } catch (err) {

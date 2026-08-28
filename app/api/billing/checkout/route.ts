@@ -10,6 +10,9 @@ import {
   getConfiguredPriceId,
   getAppUrl,
 } from "@/lib/stripe/server";
+import { trackEvent } from "@/lib/analytics/posthog";
+import { EVENTS } from "@/lib/analytics/events";
+import { captureApiError } from "@/lib/monitoring/sentry";
 
 export async function POST() {
   const { userId: clerkId } = await auth();
@@ -76,9 +79,12 @@ export async function POST() {
       );
     }
 
+    await trackEvent(EVENTS.CHECKOUT_INITIATED, clerkId, { company_id: company.id });
+
     return NextResponse.json({ data: { url: session.url } });
   } catch (err) {
     console.error("[billing/checkout] Error creating checkout session:", err);
+    captureApiError(err, "/api/billing/checkout", clerkId);
     return NextResponse.json(
       {
         error: {

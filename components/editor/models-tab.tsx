@@ -26,12 +26,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import posthog from "posthog-js";
+import { EVENTS } from "@/lib/analytics/events";
 
 /**
  * All Models tab — per-provider enablement for scans & prompt generation
  * (spec 18, §11). Mounted in the EditorNavbar center section on md+ screens.
  */
 export function ModelsTab() {
+  const [open, setOpen] = React.useState(false);
   const [view, setView] = React.useState<ProviderCatalogView | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -109,7 +112,15 @@ export function ModelsTab() {
   };
 
   return (
-    <Popover>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (nextOpen) {
+          posthog.capture(EVENTS.MODELS_TAB_OPENED);
+        }
+        setOpen(nextOpen);
+      }}
+    >
       <PopoverTrigger
         render={
           <Button

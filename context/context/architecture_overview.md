@@ -22,6 +22,8 @@ Buyers increasingly ask AI models for software recommendations (e.g., *"What is 
 - **AI Integration Layer:** Vercel AI SDK (`ai`), wrapping 7 AI providers: Free Tier (`Gemini`, `Groq`, `Nvidia NIM`, `OpenRouter`, `OpenAI`) and Premium Tier (`Anthropic`, `Perplexity`). Supports fallback candidate iteration and tier entitlement checks.
 - **Visibility Scoring Engine:** Server-only multi-factor weighted scoring algorithm (`lib/scoring/`).
 - **Prompt Opportunity & Management:** Seven buyer-intent taxonomy (`lib/prompts/intent.ts`), Business Profile–grounded AI suggestion generator (`lib/prompts/generator.ts`), server-side Opportunity Score calculator (`lib/scoring/opportunity.ts`), and pre-scan review workspace UI (`app/(editor)/prompts/page.tsx`).
+- **Product Analytics:** PostHog (`posthog-js` client + `posthog-node` server) for event tracking, user identification, and product signal. Thin wrappers in `lib/analytics/`.
+- **Error Monitoring:** Sentry (`@sentry/nextjs`) for exception capture, performance tracing, and error alerting across API routes, background jobs, and React components. Thin wrappers in `lib/monitoring/`.
 
 ### Architecture Overview Diagram
 
@@ -36,6 +38,8 @@ graph TD
         ServerComponents -->|Read Model| DBData["Dashboard Read Helpers (lib/db/dashboard.ts)"]
         DBData -->|Scoring Engine| ScoringEngine["Server Scoring Calculator (lib/scoring/)"]
         ServerComponents -->|Render Props| ClientUI["Dashboard UI Components (components/dashboard/)"]
+        APIRoutes -->|trackEvent| PostHogAnalytics["PostHog Analytics (lib/analytics/posthog.ts)"]
+        APIRoutes -->|captureApiError| SentryMonitoring["Sentry Monitoring (lib/monitoring/sentry.ts)"]
     end
     
     APIRoutes -->|Trigger Task| TriggerDev["Trigger.dev Worker Engine (lib/jobs/scan.ts)"]
@@ -46,9 +50,13 @@ graph TD
         AIRegistry -->|3. Call AI APIs| AIProviders["External AI Services (OpenAI, Anthropic, Gemini, Perplexity)"]
         TriggerDev -->|4. Parse Completion| ResponseParser["Tolerant Response Parser (lib/scan/parse.ts)"]
         TriggerDev -->|5. Write Results| PrismaORM["Prisma ORM Client (lib/db/)"]
+        TriggerDev -->|trackEvent| PostHogAnalytics
+        TriggerDev -->|captureJobError| SentryMonitoring
     end
     
     PrismaORM -->|SQL Queries| NeonPostgres[("Neon Serverless PostgreSQL DB")]
+    PostHogAnalytics -->|HTTP| PostHogCloud[("PostHog Cloud (analytics)")]
+    SentryMonitoring -->|HTTP| SentryCloud[("Sentry Cloud (errors)")]
 ```
 
 ---
@@ -89,6 +97,8 @@ graph TD
     LibFolder --> LibScan["lib/scan/ (Parser & Prompt Logic)"]
     LibFolder --> LibScoring["lib/scoring/ (Visibility Score Algorithm)"]
     LibFolder --> LibUtils["lib/utils/ (Cache & Domain Normalization)"]
+    LibFolder --> LibAnalytics["lib/analytics/ (PostHog Product Analytics)"]
+    LibFolder --> LibMonitoring["lib/monitoring/ (Sentry Error Monitoring)"]
 ```
 
 ### Folder Responsibilities
@@ -104,6 +114,8 @@ graph TD
 - **`lib/scan/`**: Core scan engine modules for building prompt templates and parsing AI completions.
 - **`lib/scoring/`**: Pure, server-side core logic (`weights.ts`, `calculator.ts`) for calculating the weighted 0–100 Visibility Score from scan results.
 - **`lib/utils/`**: Utility modules including Upstash Redis caching (`cache.ts`) and domain validation (`domain.ts`).
+- **`lib/analytics/`**: PostHog product analytics — server singleton (`posthog.ts`), client provider (`posthog-client.tsx`), user identification (`posthog-identify.tsx`), and event constants (`events.ts`). Graceful no-op when env vars are missing.
+- **`lib/monitoring/`**: Sentry error monitoring — server helpers (`captureApiError`, `captureJobError`, `captureMessage`) and client re-exports. Thin wrappers around `@sentry/nextjs`.
 
 ---
 
@@ -131,6 +143,13 @@ graph TD
 | [`lib/utils/cache.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/utils/cache.ts) | Handles 24-hour Upstash Redis caching over REST HTTP. | Scan Job (`lib/jobs/scan.ts`) |
 | [`lib/providers/registry.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/providers/registry.ts) | Inspects API key environment variables and returns active AI providers. | Scan Job & Prompt Generator |
 | [`lib/db/results.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/db/results.ts) | Handles database deletion and batch-creation of `ScanResult` & `ScanResultCitation` rows. | Scan Job (`lib/jobs/scan.ts`) |
+| [`lib/analytics/posthog.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/analytics/posthog.ts) | Server-side PostHog singleton — `trackEvent`, `identifyUser`, `shutdownPosthog`. No-op when env vars missing. | API routes, Trigger.dev jobs |
+| [`lib/analytics/posthog-client.tsx`](file:///c:/Users/Ryon/Downloads/answer-os/lib/analytics/posthog-client.tsx) | Client PostHog provider — initializes `posthog-js` in the browser with `autocapture: false`. | Root layout (`app/layout.tsx`) |
+| [`lib/analytics/events.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/analytics/events.ts) | Central event name constants (`EVENTS.SCAN_INITIATED`, etc.) — single source of truth for all tracked events. | All analytics call sites |
+| [`lib/monitoring/sentry.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/monitoring/sentry.ts) | Server-side Sentry helpers — `captureApiError`, `captureJobError`, `captureMessage` with scope tags. | API routes, Trigger.dev jobs |
+| [`sentry.client.config.ts`](file:///c:/Users/Ryon/Downloads/answer-os/sentry.client.config.ts) | Sentry client-side initialization — 10% traces in production, 100% in dev. | Next.js client bundle |
+| [`sentry.server.config.ts`](file:///c:/Users/Ryon/Downloads/answer-os/sentry.server.config.ts) | Sentry server-side initialization — matches client config. | Next.js server runtime |
+| [`instrumentation.ts`](file:///c:/Users/Ryon/Downloads/answer-os/instrumentation.ts) | Next.js 16 instrumentation hook — loads Sentry server/edge configs on startup. | Next.js server startup |
 
 ---
 
@@ -318,7 +337,7 @@ erDiagram
 - **Authentication System:** Managed via `@clerk/nextjs`.
 - **Middleware Protection:** Route access is checked at the proxy level (`proxy.ts`). Protected editor routes execute `auth.protect()`.
 - **Authorization & Data Isolation:** Data queries enforce company ownership using `getCompanyByClerkId(clerkId)`.
-- **Credential Storage:** Secrets (`OPENAI_API_KEY`, `DATABASE_URL`, `UPSTASH_REDIS_REST_TOKEN`) are kept strictly in server-side environment variables (`.env.local`) and are never exposed to browser bundles.
+- **Credential Storage:** Secrets (`OPENAI_API_KEY`, `DATABASE_URL`, `UPSTASH_REDIS_REST_TOKEN`, `POSTHOG_KEY`, `SENTRY_DSN`, `SENTRY_AUTH_TOKEN`) are kept strictly in server-side environment variables (`.env.local`) and are never exposed to browser bundles. PostHog uses `NEXT_PUBLIC_POSTHOG_KEY` for client-side identification (safe to expose — it's a project API key, not a secret).
 
 ---
 
@@ -359,6 +378,14 @@ erDiagram
 - **Where:** [`lib/scoring/calculator.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/scoring/calculator.ts).
 - **Why:** Completely decouples scoring math from database ORM objects, enabling instant Vitest unit testing without DB mocks.
 
+### 4. Thin Wrapper / Graceful No-Op Pattern
+- **Where:** [`lib/analytics/posthog.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/analytics/posthog.ts), [`lib/monitoring/sentry.ts`](file:///c:/Users/Ryon/Downloads/answer-os/lib/monitoring/sentry.ts).
+- **Why:** Wraps third-party SDKs behind thin helper functions that silently no-op when environment variables are missing. This means the app works perfectly without PostHog or Sentry configured — analytics and monitoring are purely additive infrastructure.
+
+### 5. Provider Nesting Pattern (Root Layout)
+- **Where:** [`app/layout.tsx`](file:///c:/Users/Ryon/Downloads/answer-os/app/layout.tsx).
+- **Why:** `ClerkProvider → PostHogProvider → ErrorBoundary → html` ensures auth context is available first, analytics are initialized second, and error boundaries catch failures from everything below. Each layer is independent and composable.
+
 ---
 
 ## 13. How to Navigate This Codebase: Beginner Roadmap
@@ -379,3 +406,7 @@ erDiagram
 - **Background Task:** A non-blocking process that executes long-running jobs outside the web request cycle.
 - **Idempotency:** A design property ensuring that executing an operation multiple times produces the exact same outcome without side-effects.
 - **Server Component:** React component that renders exclusively on the web server before sending HTML to the browser.
+- **PostHog:** An open-source product analytics platform. Tracks user actions ("events") like signups, scans, and upgrades. Helps founders understand how users interact with their product.
+- **Sentry:** An error monitoring platform. Captures unhandled exceptions, API route failures, and background job crashes — then alerts the team so bugs get fixed before users notice.
+- **ErrorBoundary:** A React component that catches rendering errors in its child tree and shows a fallback UI instead of crashing the entire page.
+- **Instrumentation Hook (`instrumentation.ts`):** A Next.js convention that runs code once when the server starts — used to initialize monitoring tools like Sentry before any requests are handled.

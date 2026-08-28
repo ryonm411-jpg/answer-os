@@ -10,6 +10,9 @@ import {
   upsertSubscriptionFromStripe,
   recordStripeWebhookEvent,
 } from "@/lib/db/subscriptions";
+import { trackEvent } from "@/lib/analytics/posthog";
+import { EVENTS } from "@/lib/analytics/events";
+import { captureApiError } from "@/lib/monitoring/sentry";
 
 export async function POST(req: Request) {
   let rawBody = "";
@@ -110,6 +113,17 @@ export async function POST(req: Request) {
           `[webhooks/stripe] Checkout completed for session ${session.id}, companyId: ${session.metadata?.companyId}`
         );
         await recordStripeWebhookEvent(event.id, event.type);
+        if (session.metadata?.companyId) {
+          const company = await prisma.company.findUnique({
+            where: { id: session.metadata.companyId },
+            select: { user: { select: { clerkId: true } } },
+          });
+          if (company) {
+            await trackEvent(EVENTS.SUBSCRIPTION_ACTIVATED, company.user.clerkId, {
+              company_id: session.metadata.companyId,
+            });
+          }
+        }
         break;
       }
 
@@ -123,6 +137,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ received: true });
   } catch (err) {
     console.error(`[webhooks/stripe] Processing error for event ${event.id}:`, err);
+    captureApiError(err, "/api/webhooks/stripe");
     // Return 500 so Stripe will retry transient database failures
     return NextResponse.json(
       { error: { message: "Internal processing error" } },

@@ -9,6 +9,9 @@ import {
 import { isValidIntent } from "@/lib/prompts/intent";
 import { prisma } from "@/lib/db/prisma";
 import type { PromptIntent } from "@/generated/prisma";
+import { trackEvent } from "@/lib/analytics/posthog";
+import { EVENTS } from "@/lib/analytics/events";
+import { captureApiError } from "@/lib/monitoring/sentry";
 
 function normalizeText(text: string): string {
   return text.trim().replace(/\s+/g, " ").toLowerCase();
@@ -140,6 +143,8 @@ export async function PATCH(
 
     const updated = await updateCompanyPrompt(id, company.id, changes);
 
+    await trackEvent(EVENTS.PROMPT_UPDATED, userId, { prompt_id: updated.id });
+
     return NextResponse.json({
       data: {
         prompt: {
@@ -154,7 +159,8 @@ export async function PATCH(
         },
       },
     });
-  } catch {
+  } catch (err) {
+    captureApiError(err, `/api/prompts/${id}`);
     return NextResponse.json(
       { error: { message: "Failed to update prompt" } },
       { status: 500 }
@@ -228,6 +234,8 @@ export async function DELETE(
   }
 
   await archiveCompanyPrompt(id, company.id);
+
+  await trackEvent(EVENTS.PROMPT_ARCHIVED, userId, { prompt_id: id });
 
   return NextResponse.json({
     data: {

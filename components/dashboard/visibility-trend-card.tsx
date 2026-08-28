@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { TrendingUp, Download, Scan } from "lucide-react";
 import { VisibilityHoverTooltip } from "./visibility-hover-tooltip";
 import type { MultiBrandTrendPoint } from "@/lib/db/dashboard";
+import posthog from "posthog-js";
+import { EVENTS } from "@/lib/analytics/events";
 
 interface VisibilityTrendCardProps {
   trend: MultiBrandTrendPoint[];
@@ -92,6 +94,7 @@ export function VisibilityTrendCard({ trend, onRunScan }: VisibilityTrendCardPro
     });
 
     const csvContent = "data:text/csv;charset=utf-8," + [headers, ...rows].join("\n");
+    posthog.capture(EVENTS.EXPORT_CSV, { rows: trend.length, brands: distinctBrands.length });
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);

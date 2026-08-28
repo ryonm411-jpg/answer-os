@@ -33,7 +33,7 @@ export function FailedChecksModal({
   onOpenChange,
   scanId,
 }: FailedChecksModalProps) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [errors, setErrors] = useState<FailedCheckItem[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<string>("ALL");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -42,7 +42,16 @@ export function FailedChecksModal({
     if (!open || !scanId) return;
 
     let isMounted = true;
-    setLoading(true);
+
+    // Clear stale data + show the spinner when the dialog (re)opens. Wrapped in a
+    // promise so the state updates land after the effect's synchronous phase
+    // (react-hooks/set-state-in-effect).
+    Promise.resolve().then(() => {
+      if (isMounted) {
+        setErrors([]);
+        setLoading(true);
+      }
+    });
 
     fetch(`/api/scans/${scanId}/errors`)
       .then((res) => res.json())

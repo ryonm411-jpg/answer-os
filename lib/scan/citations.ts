@@ -1,5 +1,3 @@
-import type { CitationType as PrismaCitationType } from "@/generated/prisma";
-
 export type CitationType = "YOU" | "COMPETITOR" | "CORPORATE" | "EDITORIAL" | "UGC" | "OTHER";
 
 export interface ExtractedCitation {

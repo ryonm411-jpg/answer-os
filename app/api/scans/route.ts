@@ -9,6 +9,9 @@ import {
   getAvailableProviders,
   resolveEffectiveProviders,
 } from "@/lib/providers";
+import { trackEvent } from "@/lib/analytics/posthog";
+import { EVENTS } from "@/lib/analytics/events";
+import { captureApiError } from "@/lib/monitoring/sentry";
 import type { runScan } from "@/lib/jobs/scan";
 
 /**
@@ -106,8 +109,8 @@ export async function POST() {
       scanId: scan.id,
       providers,
     });
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (_error) {
+  } catch (error) {
+    captureApiError(error, "/api/scans", clerkId);
     await prisma.scan.update({
       where: { id: scan.id },
       data: { status: "FAILED", completedAt: new Date() },
@@ -117,6 +120,11 @@ export async function POST() {
       { status: 502 }
     );
   }
+
+  await trackEvent(EVENTS.SCAN_INITIATED, clerkId, {
+    scan_id: scan.id,
+    provider_count: providers.length,
+  });
 
   return NextResponse.json(
     { data: { scanId: scan.id, status: "PENDING", providers } },
