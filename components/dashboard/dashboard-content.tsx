@@ -35,21 +35,31 @@ export function DashboardContent({ company, data }: DashboardContentProps) {
   const router = useRouter();
   const { openDialog } = useDialogs();
 
+  // Combine company info from prop or data
+  const currentCompany = data?.company || company;
+
   // Filter state for Overview
   const [filters, setFilters] = useState<OverviewFilterValues>({
     days: 14,
     provider: "all",
+    promptType: "all",
   });
   const [fetchedTrend, setFetchedTrend] = useState<MultiBrandTrendPoint[] | null>(null);
   const [sourcesData, setSourcesData] = useState<SourcesSummaryData | null>(null);
 
   // Refetch trend & sources when filters change
   useEffect(() => {
+    if (!currentCompany) {
+      setFetchedTrend(null);
+      setSourcesData(null);
+      return;
+    }
+
     let isMounted = true;
 
     Promise.all([
-      getDashboardTrend(filters.days, filters.provider),
-      getDashboardSources(filters.days, filters.provider, data?.latestCompletedScanId),
+      getDashboardTrend(filters.days, filters.provider, filters.promptType),
+      getDashboardSources(filters.days, filters.provider, data?.latestCompletedScanId, filters.promptType),
     ])
       .then(([trend, sources]) => {
         if (isMounted) {
@@ -64,12 +74,9 @@ export function DashboardContent({ company, data }: DashboardContentProps) {
     return () => {
       isMounted = false;
     };
-  }, [filters, data?.latestCompletedScanId]);
+  }, [filters, data?.latestCompletedScanId, currentCompany]);
 
   const activeTrend = fetchedTrend ?? data?.multiBrandTrend ?? [];
-
-  // Combine company info from prop or data
-  const currentCompany = data?.company || company;
 
   const latestScan = data?.latestScan || null;
   const isScanRunning = latestScan?.status === "PENDING" || latestScan?.status === "RUNNING";
@@ -194,6 +201,18 @@ export function DashboardContent({ company, data }: DashboardContentProps) {
     );
   }
 
+  const activeScoreTab: "overall" | "branded" | "organic" =
+    filters.promptType === "organic"
+      ? "organic"
+      : filters.promptType === "branded"
+      ? "branded"
+      : "overall";
+
+  const handleScoreTabChange = (tab: "overall" | "branded" | "organic") => {
+    const newPromptType = tab === "organic" ? "organic" : tab === "branded" ? "branded" : "all";
+    setFilters((prev) => ({ ...prev, promptType: newPromptType }));
+  };
+
   // --- State 4 & 5: Completed Scan with usable data (plus optional running banner) ---
   return (
     <div className="space-y-6">
@@ -205,11 +224,12 @@ export function DashboardContent({ company, data }: DashboardContentProps) {
         onRemoveDomain={handleRemoveDomain}
       />
 
-      {/* Filter Bar (Brand, Date Range, AI Model) */}
+      {/* Filter Bar (Brand, Date Range, AI Model, Prompt Scope) */}
       <OverviewFilterBar
         companyName={currentCompany.name}
         selectedDays={filters.days}
         selectedProvider={filters.provider}
+        selectedPromptType={filters.promptType}
         onChange={setFilters}
       />
 
@@ -232,7 +252,11 @@ export function DashboardContent({ company, data }: DashboardContentProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <VisibilityScoreCard
           score={data?.score || null}
+          brandedScore={data?.brandedScore || null}
+          unbrandedScore={data?.unbrandedScore || null}
           completedAt={latestScan?.completedAt || null}
+          activeTab={activeScoreTab}
+          onTabChange={handleScoreTabChange}
         />
         <ScoreFactorBreakdown factors={data?.score?.factors || null} />
       </div>

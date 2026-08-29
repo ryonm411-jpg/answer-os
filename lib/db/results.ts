@@ -7,6 +7,7 @@ import type { ExtractedCitation } from "@/lib/scan/citations";
 export interface ScanResultInput {
   promptId: string;
   provider: AIProvider;
+  model?: string | null;
   mentioned: boolean;
   position: number | null;
   sentiment: ScanSentiment | null;
@@ -34,6 +35,7 @@ export async function createScanResults(scanId: string, results: ScanResultInput
             scanId,
             promptId: r.promptId,
             provider: r.provider,
+            model: r.model ?? null,
             mentioned: r.mentioned,
             position: r.position,
             sentiment: r.sentiment,

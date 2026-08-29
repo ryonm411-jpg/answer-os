@@ -40,7 +40,7 @@ const TYPE_CONFIG: Record<
 
 export async function getSourcesSummary(
   companyId: string,
-  opts?: { scanId?: string | null; days?: number; provider?: string }
+  opts?: { scanId?: string | null; days?: number; provider?: string; promptType?: string }
 ): Promise<SourcesSummaryData> {
   let targetScanId = opts?.scanId ?? null;
 
@@ -66,11 +66,21 @@ export async function getSourcesSummary(
       ? (opts.provider.toUpperCase() as AIProvider)
       : undefined;
 
+  const targetPromptType =
+    opts?.promptType && opts.promptType !== "all"
+      ? opts.promptType.toUpperCase() === "ORGANIC" || opts.promptType.toUpperCase() === "UNBRANDED"
+        ? ("UNBRANDED" as const)
+        : opts.promptType.toUpperCase() === "BRANDED"
+        ? ("BRANDED" as const)
+        : undefined
+      : undefined;
+
   const validScanResults = await prisma.scanResult.findMany({
     where: {
       scanId: targetScanId,
       error: null,
       provider: providerFilter,
+      prompt: targetPromptType ? { promptType: targetPromptType } : undefined,
     },
     select: { id: true },
   });

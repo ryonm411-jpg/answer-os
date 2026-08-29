@@ -47,6 +47,11 @@ enum PromptIntent {
   PURCHASE_INTENT
 }
 
+enum PromptType {
+  BRANDED
+  UNBRANDED
+}
+
 model User {
   id        String   @id @default(cuid())
   clerkId   String   @unique
@@ -149,6 +154,7 @@ model ScanResult {
   promptId             String
   prompt               Prompt               @relation(fields: [promptId], references: [id], onDelete: Cascade)
   provider             AIProvider
+  model                String?
   mentioned            Boolean
   position             Int?
   sentiment            Sentiment?
@@ -184,6 +190,7 @@ model Prompt {
   company           Company?     @relation(fields: [companyId], references: [id], onDelete: Cascade)
   source            PromptSource @default(CURATED)
   intent            PromptIntent @default(PRODUCT)
+  promptType        PromptType   @default(UNBRANDED)
   text              String
   category          String
   searchVolume      Int?
@@ -197,6 +204,7 @@ model Prompt {
   @@index([companyId])
   @@index([category])
   @@index([intent])
+  @@index([promptType])
   @@index([archivedAt])
 }
 

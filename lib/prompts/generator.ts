@@ -1,5 +1,7 @@
+import type { PromptType } from "@/generated/prisma";
 import { getAvailableProviders } from "../providers/registry";
 import type { AIProvider } from "../providers/types";
+import { classifyPromptType } from "./classify";
 import { CURATED_PROMPTS, PROMPT_CATEGORIES, normalizePromptText } from "./curated";
 import { PromptGenerationError } from "./errors";
 import type { PromptIntent } from "./intent";
@@ -14,6 +16,7 @@ export interface PromptSuggestion {
   text: string;
   category: string;
   intent: PromptIntent;
+  promptType: PromptType;
   demandScore: number;
   businessRelevance: number;
 }
@@ -74,7 +77,9 @@ export function filterSuggestions(
   raw: Partial<PromptSuggestion>[],
   curatedTexts: Set<string>,
   max: number = 20,
-  fallbackCategory?: string
+  fallbackCategory?: string,
+  companyName?: string,
+  companyDomain?: string
 ): PromptSuggestion[] {
   const cap = Math.min(Math.max(1, max), 50);
   const result: PromptSuggestion[] = [];
@@ -110,6 +115,11 @@ export function filterSuggestions(
     // Fallback parser behavior per spec §6: PRODUCT used only when malformed intent can be recovered
     const intent: PromptIntent = isValidIntent(item.intent) ? item.intent : "PRODUCT";
 
+    const promptType: PromptType =
+      item.promptType && (item.promptType === "BRANDED" || item.promptType === "UNBRANDED")
+        ? item.promptType
+        : classifyPromptType(rawText, companyName || "", companyDomain || "");
+
     const demandScore =
       typeof item.demandScore === "number" && !isNaN(item.demandScore)
         ? clamp(Math.round(item.demandScore), 0, 100)
@@ -124,6 +134,7 @@ export function filterSuggestions(
       text: rawText,
       category,
       intent,
+      promptType,
       demandScore,
       businessRelevance,
     });
@@ -248,5 +259,12 @@ Example JSON output format:
     CURATED_PROMPTS.map((p) => normalizePromptText(p.text))
   );
 
-  return filterSuggestions(rawParsed, curatedSet, input.count ?? 20, input.businessProfile.category);
+  return filterSuggestions(
+    rawParsed,
+    curatedSet,
+    input.count ?? 20,
+    input.businessProfile.category,
+    input.companyName,
+    input.domain
+  );
 }

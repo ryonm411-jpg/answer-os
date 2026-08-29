@@ -51,9 +51,10 @@ export function MentionsOverview({ summary, latestScan }: MentionsOverviewProps)
           {/* Metric Cards Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-1">
-              <span className="text-[11px] font-medium text-muted-foreground uppercase">Valid Checks</span>
+              <span className="text-[11px] font-medium text-muted-foreground uppercase">Scan Coverage</span>
               <div className="text-xl font-bold text-foreground">
-                {validChecks} <span className="text-xs font-normal text-muted-foreground">/ {totalChecks}</span>
+                {totalChecks > 0 ? `${Math.round((validChecks / totalChecks) * 100)}%` : "0%"}
+                <span className="text-xs font-normal text-muted-foreground ml-1.5">({validChecks}/{totalChecks})</span>
               </div>
             </div>
 
@@ -66,6 +67,7 @@ export function MentionsOverview({ summary, latestScan }: MentionsOverviewProps)
               <span className="text-[11px] font-medium text-muted-foreground uppercase">Mention Rate</span>
               <div className="text-xl font-bold text-emerald-500">
                 {validChecks > 0 ? `${mentionRatePercent}%` : "—"}
+                <span className="text-[10px] font-normal text-muted-foreground ml-1">({mentions}/{validChecks})</span>
               </div>
             </div>
 

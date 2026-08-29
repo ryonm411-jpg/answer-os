@@ -6,34 +6,51 @@ import { saveScanRecommendations } from "@/lib/db/recommendations";
 import type { ScanResultInput } from "@/lib/db/results";
 import { AIProviderError } from "@/lib/providers/errors";
 import { getAvailableProviders } from "@/lib/providers/registry";
+import { getProviderProfile } from "@/lib/providers/profiles";
 import { TO_PRISMA_PROVIDER } from "@/lib/providers/types";
 import type { AIProvider, AIProviderName, AIResponse } from "@/lib/providers/types";
-import { buildScanPrompt } from "@/lib/scan/prompt";
-import { parseScanResponse } from "@/lib/scan/parse";
+import type { PromptType } from "@/generated/prisma";
+import { buildScanPrompt, buildUnbrandedScanPrompt } from "@/lib/scan/prompt";
+import { parseScanResponse, parseUnbrandedScanResponse } from "@/lib/scan/parse";
 import {
   SCAN_MAX_TOKENS,
   SCAN_TEMPERATURE,
-  SCAN_PROVIDER_MAX_ATTEMPTS,
   SCAN_RETRY_BASE_MS,
   SCAN_RETRY_MAX_MS,
 } from "@/lib/scan/config";
 import { scanResultKey, getCachedScanResult, setCachedScanResult } from "@/lib/utils/cache";
+import { extractCitations } from "@/lib/scan/citations";
+import { trackEvent } from "@/lib/analytics/posthog";
+import { EVENTS } from "@/lib/analytics/events";
+import { captureJobError } from "@/lib/monitoring/sentry";
+import * as Sentry from "@sentry/nextjs";
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Bounded retries for retryable provider errors (Decision #3). */
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.VERCEL_ENV || "development",
+  tracesSampleRate: process.env.VERCEL_ENV === "production" ? 0.1 : 1.0,
+  enabled: process.env.NODE_ENV !== "development" || !!process.env.SENTRY_DSN,
+});
+
+/** Bounded retries for retryable provider errors using provider profile limits. */
 async function askWithRetry(provider: AIProvider, prompt: string): Promise<AIResponse> {
+  const profile = getProviderProfile(provider.name);
   let lastError: unknown;
-  for (let attempt = 0; attempt < SCAN_PROVIDER_MAX_ATTEMPTS; attempt++) {
+  const maxAttempts = profile.maxRetries;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       return await provider.ask(prompt, {
         maxTokens: SCAN_MAX_TOKENS,
         temperature: SCAN_TEMPERATURE,
+        timeoutMs: profile.requestTimeoutMs,
       });
     } catch (error) {
       lastError = error;
       const retryable = error instanceof AIProviderError && error.retryable;
-      if (!retryable || attempt === SCAN_PROVIDER_MAX_ATTEMPTS - 1) throw error;
+      if (!retryable || attempt === maxAttempts - 1) throw error;
       const backoff = Math.min(SCAN_RETRY_BASE_MS * 2 ** attempt, SCAN_RETRY_MAX_MS);
       logger.warn("Provider call retrying", {
         provider: provider.name,
@@ -43,35 +60,19 @@ async function askWithRetry(provider: AIProvider, prompt: string): Promise<AIRes
       await sleep(backoff);
     }
   }
-  throw lastError; // unreachable — TS exhaustiveness
+  throw lastError;
 }
-
-import { extractCitations } from "@/lib/scan/citations";
-import { trackEvent } from "@/lib/analytics/posthog";
-import { EVENTS } from "@/lib/analytics/events";
-import { captureJobError } from "@/lib/monitoring/sentry";
-import * as Sentry from "@sentry/nextjs";
-
-// Trigger.dev workers bundle this file independently and never run Next.js's
-// instrumentation.ts, so initialize Sentry here with the same config so
-// captureJobError() actually reports (spec 21, "Sentry + Trigger.dev").
-// No-op (silently disabled) when SENTRY_DSN is missing.
-Sentry.init({
-  dsn: process.env.SENTRY_DSN,
-  environment: process.env.VERCEL_ENV || "development",
-  tracesSampleRate: process.env.VERCEL_ENV === "production" ? 0.1 : 1.0,
-  enabled: process.env.NODE_ENV !== "development" || !!process.env.SENTRY_DSN,
-});
 
 /** One provider × prompt check → one ScanResultInput (Decision #7, #8, #9). */
 async function scanPrompt(input: {
   provider: AIProvider;
-  prompt: { id: string; text: string };
+  prompt: { id: string; text: string; promptType?: PromptType };
   company: { id: string; name: string; domain: string; competitors?: Array<{ domain: string }> };
 }): Promise<ScanResultInput> {
   const { provider, prompt, company } = input;
   const competitorDomains = company.competitors?.map((c) => c.domain) ?? [];
   const prismaProvider = TO_PRISMA_PROVIDER[provider.name] as import("@/generated/prisma").AIProvider;
+  const profile = getProviderProfile(provider.name);
   const providerKey =
     process.env.USE_MOCK_PROVIDERS === "true" ? `mock:${provider.name}` : provider.name;
   const cacheKey = scanResultKey(company.id, prompt.id, providerKey);
@@ -82,6 +83,7 @@ async function scanPrompt(input: {
     return {
       promptId: prompt.id,
       provider: prismaProvider,
+      model: profile.model,
       mentioned: cached.mentioned,
       position: cached.position,
       sentiment: cached.sentiment,
@@ -94,14 +96,50 @@ async function scanPrompt(input: {
   }
 
   try {
-    const response = await askWithRetry(
-      provider,
-      buildScanPrompt({
-        question: prompt.text,
-        companyName: company.name,
-        companyDomain: company.domain,
-      })
-    );
+    const isBranded = prompt.promptType === "BRANDED";
+
+    const scanText = isBranded
+      ? buildScanPrompt({
+          question: prompt.text,
+          companyName: company.name,
+          companyDomain: company.domain,
+        })
+      : buildUnbrandedScanPrompt({
+          question: prompt.text,
+          companyName: company.name,
+          companyDomain: company.domain,
+        });
+
+    // Free tier restriction: compact oversized prompts to 1,200 chars max to protect shared free API keys
+    let finalScanText = scanText;
+    if (profile.tier === "free" && scanText.length > 1200) {
+      finalScanText = scanText.slice(0, 1200);
+      logger.info("Compacted free tier prompt text", {
+        provider: provider.name,
+        originalLength: scanText.length,
+        compactedLength: finalScanText.length,
+      });
+    }
+
+    // Pre-dispatch token/request budgeting: check estimated payload size
+    const estimatedInputTokens = Math.ceil(finalScanText.length / 4);
+    if (estimatedInputTokens > profile.tokensPerMinute) {
+      return {
+        promptId: prompt.id,
+        provider: prismaProvider,
+        model: profile.model,
+        mentioned: false,
+        position: null,
+        sentiment: null,
+        reasoning: null,
+        rawResponse: null,
+        competitorsMentioned: null,
+        error: `Payload size (${estimatedInputTokens} tokens) exceeds provider budget (${profile.tokensPerMinute} TPM)`,
+        citations: [],
+      };
+    }
+
+    const response = await askWithRetry(provider, finalScanText);
 
     const citations = extractCitations(
       response.content,
@@ -109,12 +147,15 @@ async function scanPrompt(input: {
       competitorDomains
     );
 
-    const parsed = parseScanResponse(response.content);
+    const parsed = isBranded
+      ? parseScanResponse(response.content)
+      : parseUnbrandedScanResponse(response.content, company.name, company.domain);
+
     if (!parsed.ok) {
-      // Unparseable response → error row, raw response preserved for debugging.
       return {
         promptId: prompt.id,
         provider: prismaProvider,
+        model: profile.model,
         mentioned: false,
         position: null,
         sentiment: null,
@@ -132,6 +173,7 @@ async function scanPrompt(input: {
     return {
       promptId: prompt.id,
       provider: prismaProvider,
+      model: profile.model,
       mentioned: parsed.data.mentioned,
       position: parsed.data.position,
       sentiment: parsed.data.sentiment,
@@ -146,6 +188,7 @@ async function scanPrompt(input: {
       return {
         promptId: prompt.id,
         provider: prismaProvider,
+        model: profile.model,
         mentioned: false,
         position: null,
         sentiment: null,
@@ -192,28 +235,27 @@ export const runScan = task({
       await deleteScanResults(scanId); // retry idempotency (Decision #8)
 
       const results: ScanResultInput[] = [];
-      const scanTasks: Array<() => Promise<ScanResultInput>> = [];
 
+      // Provider-aware bounded concurrency execution
       for (const provider of providers) {
-        for (const prompt of prompts) {
-          scanTasks.push(() =>
-            scanPrompt({
-              provider,
-              prompt: { id: prompt.id, text: prompt.text },
-              company: scan.company,
-            })
-          );
-        }
-      }
+        const profile = getProviderProfile(provider.name);
+        const concurrency = profile.maxConcurrency;
+        const providerTasks = prompts.map((prompt) => () =>
+          scanPrompt({
+            provider,
+            prompt: { id: prompt.id, text: prompt.text, promptType: prompt.promptType },
+            company: scan.company,
+          })
+        );
 
-      // Execute in bounded parallel batches (concurrency = 5) with inter-batch delay to respect provider rate limits
-      const BATCH_SIZE = 5;
-      for (let i = 0; i < scanTasks.length; i += BATCH_SIZE) {
-        const batch = scanTasks.slice(i, i + BATCH_SIZE).map((fn) => fn());
-        const batchResults = await Promise.all(batch);
-        results.push(...batchResults);
-        if (i + BATCH_SIZE < scanTasks.length) {
-          await sleep(1500); // Inter-batch delay to avoid rate limit spikes (e.g. Gemini free tier 5 RPM)
+        for (let i = 0; i < providerTasks.length; i += concurrency) {
+          const batch = providerTasks.slice(i, i + concurrency).map((fn) => fn());
+          const batchResults = await Promise.all(batch);
+          results.push(...batchResults);
+          if (i + concurrency < providerTasks.length) {
+            const delayMs = profile.tier === "free" ? 1200 : 250;
+            await sleep(delayMs);
+          }
         }
       }
 

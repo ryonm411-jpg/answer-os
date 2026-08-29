@@ -4,6 +4,7 @@ export * from "./config";
 export * from "./registry";
 export * from "./tiers";
 export * from "./catalog";
+export * from "./profiles";
 export { OpenAIProvider } from "./openai";
 export { AnthropicProvider } from "./anthropic";
 export { GeminiProvider } from "./gemini";

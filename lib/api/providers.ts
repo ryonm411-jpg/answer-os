@@ -15,6 +15,9 @@ export interface ProviderStatus {
   configured: boolean;
   enabled: boolean;
   locked: boolean;
+  speedBadge?: string;
+  promptLengthNote?: string;
+  restrictionNote?: string;
 }
 
 export interface ProviderCatalogView {

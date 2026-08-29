@@ -27,13 +27,16 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const daysParam = searchParams.get("days");
   const providerParam = searchParams.get("provider");
+  const promptTypeParam = searchParams.get("promptType");
 
   const days = daysParam ? Math.max(1, parseInt(daysParam, 10) || 14) : 14;
   const provider = providerParam || "all";
+  const promptType = promptTypeParam || "all";
 
   const trend = await getMultiBrandScoreHistory(company.id, {
     dateRangeDays: days,
     provider,
+    promptType,
   });
 
   return NextResponse.json({

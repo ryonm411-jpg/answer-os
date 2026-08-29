@@ -216,7 +216,7 @@ export function ModelsTab() {
                     switchNode
                   )}
                   <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="truncate text-sm font-semibold tracking-tight">
                         {provider.label}
                       </span>
@@ -231,10 +231,35 @@ export function ModelsTab() {
                       >
                         {provider.tier === "free" ? "Free Tier" : "Paid"}
                       </Badge>
+                      {provider.speedBadge && (
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "px-1.5 py-0 text-[9px] font-normal border-border/60",
+                            provider.speedBadge.includes("Takes Longer")
+                              ? "bg-amber-500/10 text-amber-300 border-amber-500/30"
+                              : provider.speedBadge.includes("Ultra Fast")
+                              ? "bg-cyan-500/10 text-cyan-300 border-cyan-500/30"
+                              : "bg-secondary/40 text-muted-foreground"
+                          )}
+                        >
+                          {provider.speedBadge}
+                        </Badge>
+                      )}
                     </div>
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {provider.description}
                     </p>
+                    {provider.promptLengthNote && (
+                      <p className="mt-0.5 text-[11px] font-medium text-muted-foreground/80 flex items-center gap-1 flex-wrap">
+                        <span>• Prompt: {provider.promptLengthNote}</span>
+                        {provider.restrictionNote && (
+                          <span className="text-[10px] text-amber-400/90 font-mono">
+                            ({provider.restrictionNote})
+                          </span>
+                        )}
+                      </p>
+                    )}
                   </div>
                 </div>
 

@@ -16,6 +16,7 @@ export interface PromptCardData {
   text: string;
   category: string;
   intent: PromptIntent;
+  promptType?: "BRANDED" | "UNBRANDED";
   source: "CURATED" | "AI_SUGGESTED" | "USER_CUSTOM";
   demandScore: number | null;
   businessRelevance: number | null;
@@ -45,9 +46,12 @@ export function PromptCard({
       <CardContent className="p-4 space-y-3">
         {/* Top Badges */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <PromptSourceBadge source={prompt.source} />
-            <Badge variant="secondary" className="text-xs font-normal">
+            <Badge variant={prompt.promptType === "BRANDED" ? "default" : "outline"} className="text-[11px] font-normal">
+              {prompt.promptType === "BRANDED" ? "Branded" : "Organic"}
+            </Badge>
+            <Badge variant="secondary" className="text-[11px] font-normal">
               {intentLabel}
             </Badge>
           </div>

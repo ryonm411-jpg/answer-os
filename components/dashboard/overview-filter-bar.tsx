@@ -1,6 +1,6 @@
 "use client";
 
-import { HelpCircle, Calendar, Cpu, Tag } from "lucide-react";
+import { HelpCircle, Calendar, Cpu, Tag, Filter } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
@@ -12,12 +12,14 @@ import { PROVIDER_CATALOG } from "@/lib/providers/catalog";
 export interface OverviewFilterValues {
   days: number;
   provider: string;
+  promptType: "all" | "organic" | "branded";
 }
 
 interface OverviewFilterBarProps {
   companyName: string;
   selectedDays: number;
   selectedProvider: string;
+  selectedPromptType?: "all" | "organic" | "branded";
   onChange: (filters: OverviewFilterValues) => void;
 }
 
@@ -31,6 +33,7 @@ export function OverviewFilterBar({
   companyName,
   selectedDays,
   selectedProvider,
+  selectedPromptType = "all",
   onChange,
 }: OverviewFilterBarProps) {
   return (
@@ -55,6 +58,7 @@ export function OverviewFilterBar({
               onChange({
                 days: parseInt(e.target.value, 10),
                 provider: selectedProvider,
+                promptType: selectedPromptType,
               })
             }
             className="bg-transparent border-none text-xs font-medium text-foreground focus:outline-none cursor-pointer pr-1"
@@ -76,6 +80,7 @@ export function OverviewFilterBar({
               onChange({
                 days: selectedDays,
                 provider: e.target.value,
+                promptType: selectedPromptType,
               })
             }
             className="bg-transparent border-none text-xs font-medium text-foreground focus:outline-none cursor-pointer pr-1"
@@ -88,6 +93,32 @@ export function OverviewFilterBar({
                 {p.label}
               </option>
             ))}
+          </select>
+        </div>
+
+        {/* Prompt Scope Selector */}
+        <div className="flex items-center gap-1.5 rounded-lg border border-border bg-secondary/30 px-2.5 py-1 text-xs text-foreground">
+          <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          <select
+            value={selectedPromptType}
+            onChange={(e) =>
+              onChange({
+                days: selectedDays,
+                provider: selectedProvider,
+                promptType: e.target.value as "all" | "organic" | "branded",
+              })
+            }
+            className="bg-transparent border-none text-xs font-medium text-foreground focus:outline-none cursor-pointer pr-1"
+          >
+            <option value="all" className="bg-card text-foreground">
+              All Prompts
+            </option>
+            <option value="organic" className="bg-card text-foreground">
+              Organic (Unbranded)
+            </option>
+            <option value="branded" className="bg-card text-foreground">
+              Branded Prompts
+            </option>
           </select>
         </div>
       </div>

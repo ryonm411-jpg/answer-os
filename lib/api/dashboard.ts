@@ -20,11 +20,13 @@ export interface GetSourcesResponse {
 /** Fetch filtered multi-brand trend data from the server */
 export async function getDashboardTrend(
   days = 14,
-  provider = "all"
+  provider = "all",
+  promptType = "all"
 ): Promise<MultiBrandTrendPoint[]> {
   const params = new URLSearchParams({
     days: days.toString(),
     provider,
+    promptType,
   });
 
   const res = await fetch(`/api/dashboard/trend?${params.toString()}`, {
@@ -45,11 +47,13 @@ export async function getDashboardTrend(
 export async function getDashboardSources(
   days = 14,
   provider = "all",
-  scanId?: string | null
+  scanId?: string | null,
+  promptType = "all"
 ): Promise<SourcesSummaryData> {
   const params = new URLSearchParams({
     days: days.toString(),
     provider,
+    promptType,
   });
   if (scanId) {
     params.set("scanId", scanId);

@@ -61,6 +61,7 @@ export async function GET() {
         text: prompt.text,
         category: prompt.category,
         intent: prompt.intent,
+        promptType: prompt.promptType,
         source: prompt.source,
         searchVolume: prompt.searchVolume,
         demandScore,
@@ -152,11 +153,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const created = await addUserCustomPrompt(company.id, {
-      text: trimmedText,
-      category: typeof category === "string" && category.trim() ? category.trim() : "Other",
-      intent,
-    });
+    const created = await addUserCustomPrompt(
+      company.id,
+      {
+        text: trimmedText,
+        category: typeof category === "string" && category.trim() ? category.trim() : "Other",
+        intent,
+      },
+      company.name,
+      company.domain
+    );
 
     await trackEvent(EVENTS.PROMPT_ADDED, userId, { prompt_id: created.id });
 
@@ -168,6 +174,7 @@ export async function POST(req: Request) {
             text: created.text,
             category: created.category,
             intent: created.intent,
+            promptType: created.promptType,
             source: created.source,
             demandScore: created.demandScore,
             businessRelevance: created.businessRelevance,

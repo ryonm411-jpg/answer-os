@@ -41,6 +41,7 @@ export function PromptWorkspace({
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedIntent, setSelectedIntent] = React.useState<string>("ALL");
   const [selectedSource, setSelectedSource] = React.useState<string>("ALL");
+  const [selectedType, setSelectedType] = React.useState<string>("ALL");
   const [sortBy, setSortBy] = React.useState<"OPPORTUNITY" | "RELEVANCE" | "TEXT">("OPPORTUNITY");
 
   const [isFormOpen, setIsFormOpen] = React.useState(false);
@@ -163,6 +164,9 @@ export function PromptWorkspace({
         if (selectedSource !== "ALL" && p.source !== selectedSource) {
           return false;
         }
+        if (selectedType !== "ALL" && (p.promptType ?? "UNBRANDED") !== selectedType) {
+          return false;
+        }
         return true;
       })
       .sort((a, b) => {
@@ -183,7 +187,7 @@ export function PromptWorkspace({
         }
         return a.text.localeCompare(b.text);
       });
-  }, [prompts, searchQuery, selectedIntent, selectedSource, sortBy]);
+  }, [prompts, searchQuery, selectedIntent, selectedSource, selectedType, sortBy]);
 
   return (
     <div className="space-y-6">
@@ -253,6 +257,18 @@ export function PromptWorkspace({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          {/* Prompt Type Filter */}
+          <Select value={selectedType} onValueChange={setSelectedType}>
+            <SelectTrigger className="h-9 w-[130px] text-xs">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Types</SelectItem>
+              <SelectItem value="BRANDED">Branded</SelectItem>
+              <SelectItem value="UNBRANDED">Organic</SelectItem>
+            </SelectContent>
+          </Select>
+
           {/* Intent Filter */}
           <Select value={selectedIntent} onValueChange={setSelectedIntent}>
             <SelectTrigger className="h-9 w-[150px] text-xs">

@@ -1,13 +1,20 @@
 import { SCORE_WEIGHTS } from "./weights";
 import type { ScanSentiment } from "@/lib/scan/parse";
+import type { PromptType } from "@/generated/prisma";
 
 /** Prisma-free row shape — the calculator never imports lib/db (Decision #1). */
 export interface ScoreResultRow {
   mentioned: boolean;
-  position: number | null;        // 1-based rank of the tracked company when mentioned (12)
+  position: number | null;        // 1-based rank of the tracked company when mentioned
   sentiment: ScanSentiment | null; // toward the tracked company when mentioned
-  competitorsMentioned: string[]; // names of every OTHER company mentioned (12)
-  error: string | null;           // non-null ⇒ check failed; excluded everywhere (Decision #2)
+  competitorsMentioned: string[]; // names of every OTHER company mentioned
+  error: string | null;           // non-null ⇒ check failed; excluded everywhere
+  promptType?: PromptType;        // BRANDED or UNBRANDED
+}
+
+export interface ScoreCalculatorInput {
+  rows: ScoreResultRow[];
+  promptType?: PromptType | "ALL";
 }
 
 export interface VisibilityFactors {
@@ -15,7 +22,7 @@ export interface VisibilityFactors {
   averageRank: number;     // 0–1
   sentiment: number;       // 0–1
   competitorShare: number; // 0–1
-  sourceAuthority: number; // 0–1 — constant neutral in MVP (Decision #6)
+  sourceAuthority: number; // 0–1 — constant neutral in MVP
 }
 
 export interface ScoreSummary {
@@ -23,16 +30,17 @@ export interface ScoreSummary {
   validResults: number;  // rows without an error (the scoring denominator)
   mentions: number;      // rows where mentioned === true
   errors: number;        // rows with a non-null error
+  promptType?: PromptType | "ALL";
 }
 
 export interface ScoredScan {
-  score: number | null;          // null ⇒ nothing to score (Decision #9)
+  score: number | null;          // null ⇒ nothing to score
   factors: VisibilityFactors | null;
   summary: ScoreSummary;
 }
 
-const NEUTRAL = 0.5; // "no data" default for competitorShare, and sourceAuthority (Decision #6)
-const RANK_DEFAULT_SCORE = 0.5; // mentioned but position unknown → mid-visibility
+const NEUTRAL = 0.5;
+const RANK_DEFAULT_SCORE = 0.5;
 
 const SENTIMENT_SCORE: Record<ScanSentiment, number> = {
   POSITIVE: 1,
@@ -40,7 +48,6 @@ const SENTIMENT_SCORE: Record<ScanSentiment, number> = {
   NEGATIVE: 0,
 };
 
-/** Rank decay: position 1 → 1.0, 2 → 0.5, 3 → 0.33 — earlier is better (answeros-spec). */
 function rankScore(position: number | null): number {
   if (position !== null && position >= 1) return 1 / position;
   return RANK_DEFAULT_SCORE;
@@ -50,44 +57,55 @@ function mean(values: number[]): number {
   return values.reduce((sum, v) => sum + v, 0) / values.length;
 }
 
-export function calculateVisibilityScore(rows: ScoreResultRow[]): ScoredScan {
+export function calculateVisibilityScore(
+  input: ScoreResultRow[] | ScoreCalculatorInput,
+  filterType?: PromptType | "ALL"
+): ScoredScan {
+  let rows: ScoreResultRow[];
+  let promptTypeFilter: PromptType | "ALL" = filterType ?? "ALL";
+
+  if (Array.isArray(input)) {
+    rows = input;
+  } else {
+    rows = input.rows;
+    promptTypeFilter = input.promptType ?? filterType ?? "ALL";
+  }
+
+  // Filter by promptType if requested
+  const targetRows =
+    promptTypeFilter && promptTypeFilter !== "ALL"
+      ? rows.filter((r) => r.promptType === promptTypeFilter)
+      : rows;
+
   const summary: ScoreSummary = {
-    results: rows.length,
-    validResults: rows.filter((r) => !r.error).length,
-    mentions: rows.filter((r) => r.mentioned).length,
-    errors: rows.filter((r) => r.error !== null).length,
+    results: targetRows.length,
+    validResults: targetRows.filter((r) => !r.error).length,
+    mentions: targetRows.filter((r) => r.mentioned).length,
+    errors: targetRows.filter((r) => r.error !== null).length,
+    promptType: promptTypeFilter,
   };
 
   if (summary.validResults === 0) {
-    return { score: null, factors: null, summary }; // Decision #9
+    return { score: null, factors: null, summary };
   }
 
-  const valid = rows.filter((r) => !r.error);
+  const valid = targetRows.filter((r) => !r.error);
   const mentions = valid.filter((r) => r.mentioned);
 
-  // Mention rate (30%): clean mentions over clean checks.
   const mentionRate = mentions.length / valid.length;
-
-  // Average rank (25%): mean rank decay over mentions; 0 when never mentioned
-  // (no rank data ≠ mid score — the company wasn't ranked at all).
   const averageRank =
     mentions.length > 0 ? mean(mentions.map((r) => rankScore(r.position))) : 0;
 
-  // Sentiment (20%): mean over mentions that reported a sentiment; 0 when none
-  // (no tone data ≠ neutral tone — there were no mentions to have tone).
   const sentiments: ScanSentiment[] = [];
   for (const r of mentions) if (r.sentiment) sentiments.push(r.sentiment);
   const sentiment = sentiments.length > 0 ? mean(sentiments.map((s) => SENTIMENT_SCORE[s])) : 0;
 
-  // Competitor share (15%): tracked mentions vs mentions of ANY other company.
-  // No data at all → neutral (neither you nor competitors were named).
   const competitorPresence = valid.filter((r) => r.competitorsMentioned.length > 0).length;
   const competitorShare =
     mentions.length + competitorPresence > 0
       ? mentions.length / (mentions.length + competitorPresence)
       : NEUTRAL;
 
-  // Source authority (10%): constant neutral in MVP (Decision #6).
   const sourceAuthority = NEUTRAL;
 
   const factors: VisibilityFactors = {

@@ -85,6 +85,10 @@ export interface DashboardData {
   latestScan: LatestScanSummary | null;
   latestCompletedScanId: string | null;
   score: ScoredScan | null;
+  brandedScore: ScoredScan | null;
+  unbrandedScore: ScoredScan | null;
+  brandedPromptCount: number;
+  unbrandedPromptCount: number;
   trend: DashboardTrendPoint[];
   multiBrandTrend: MultiBrandTrendPoint[];
   competitorLeaderboard: CompetitorLeaderboardRow[];
@@ -361,7 +365,17 @@ export async function getDashboardData(companyId: string): Promise<DashboardData
   if (!company) return null;
 
   const latestScan = await getLatestScanForCompany(companyId);
-  const score = await getCompanyScore(companyId);
+  const score = await getCompanyScore(companyId, "ALL");
+  const brandedScore = await getCompanyScore(companyId, "BRANDED");
+  const unbrandedScore = await getCompanyScore(companyId, "UNBRANDED");
+
+  const brandedPromptCount = await prisma.prompt.count({
+    where: { archivedAt: null, promptType: "BRANDED", OR: [{ companyId }, { companyId: null }] },
+  });
+  const unbrandedPromptCount = await prisma.prompt.count({
+    where: { archivedAt: null, promptType: "UNBRANDED", OR: [{ companyId }, { companyId: null }] },
+  });
+
   const trend = await getCompanyScoreHistory(companyId);
 
   // Latest completed scan ID for prompt performance and competitor mentions
@@ -384,6 +398,10 @@ export async function getDashboardData(companyId: string): Promise<DashboardData
     latestScan,
     latestCompletedScanId,
     score,
+    brandedScore,
+    unbrandedScore,
+    brandedPromptCount,
+    unbrandedPromptCount,
     trend,
     multiBrandTrend,
     competitorLeaderboard,
@@ -407,10 +425,18 @@ const BRAND_COLORS = [
 /** Get multi-brand visibility score history across scans within date range */
 export async function getMultiBrandScoreHistory(
   companyId: string,
-  opts?: { dateRangeDays?: number; provider?: string }
+  opts?: { dateRangeDays?: number; provider?: string; promptType?: string }
 ): Promise<MultiBrandTrendPoint[]> {
   const days = opts?.dateRangeDays ?? 14;
   const providerFilter = opts?.provider && opts.provider !== "all" ? opts.provider.toUpperCase() : null;
+  const targetPromptType =
+    opts?.promptType && opts.promptType !== "all"
+      ? opts.promptType.toUpperCase() === "ORGANIC" || opts.promptType.toUpperCase() === "UNBRANDED"
+        ? ("UNBRANDED" as const)
+        : opts.promptType.toUpperCase() === "BRANDED"
+        ? ("BRANDED" as const)
+        : null
+      : null;
 
   const startDate = new Date();
   startDate.setDate(startDate.getDate() - days);
@@ -432,6 +458,11 @@ export async function getMultiBrandScoreHistory(
     include: {
       results: {
         where: providerFilter ? { provider: providerFilter as import("@/generated/prisma").AIProvider } : undefined,
+        include: {
+          prompt: {
+            select: { promptType: true },
+          },
+        },
       },
     },
   });
@@ -442,7 +473,11 @@ export async function getMultiBrandScoreHistory(
   const competitorMentionCounts = new Map<string, number>();
   for (const scan of chronologicalScans) {
     for (const r of scan.results) {
-      if (r.error === null && Array.isArray(r.competitorsMentioned)) {
+      if (
+        r.error === null &&
+        (!targetPromptType || r.prompt.promptType === targetPromptType) &&
+        Array.isArray(r.competitorsMentioned)
+      ) {
         for (const item of r.competitorsMentioned as { name?: unknown }[]) {
           if (typeof item?.name === "string" && item.name.trim().length > 0) {
             const name = item.name.trim();
@@ -476,7 +511,9 @@ export async function getMultiBrandScoreHistory(
     );
 
   return chronologicalScans.map((scan) => {
-    const validResults = scan.results.filter((r) => r.error === null);
+    const validResults = scan.results.filter(
+      (r) => r.error === null && (!targetPromptType || r.prompt.promptType === targetPromptType)
+    );
     const totalValidChecks = validResults.length;
 
     const primaryMentions = validResults.filter((r) => r.mentioned).length;

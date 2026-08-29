@@ -64,6 +64,9 @@ export async function GET() {
       configured: isProviderConfigured(entry.name),
       enabled,
       locked: !entitled && tier === "premium",
+      speedBadge: entry.speedBadge,
+      promptLengthNote: entry.promptLengthNote,
+      restrictionNote: entry.restrictionNote,
     };
   });
 

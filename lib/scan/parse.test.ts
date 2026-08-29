@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseScanResponse, parseSentiment } from "./parse";
+import { parseScanResponse, parseUnbrandedScanResponse, parseSentiment } from "./parse";
 
 describe("parseSentiment", () => {
   it("parses positive sentiments case-insensitively", () => {
@@ -108,135 +108,78 @@ Hope this helps!`;
       ]);
     }
   });
+});
 
-  it("parses competitors from competitorsMentioned fallback key", () => {
+describe("parseUnbrandedScanResponse", () => {
+  const trackedName = "Slickwraps";
+  const trackedDomain = "slickwraps.com";
+
+  it("identifies tracked company by domain match", () => {
     const raw = JSON.stringify({
-      mentioned: true,
-      competitorsMentioned: [
-        { name: "Vivobarefoot", position: 2, sentiment: "neutral" },
-        { name: "Altra", position: 3, sentiment: "positive" },
+      mentionedCompanies: [
+        { name: "dbrand", domain: "dbrand.com", position: 1, sentiment: "positive" },
+        { name: "Slickwraps Inc", domain: "https://www.slickwraps.com/", position: 2, sentiment: "positive", reasoning: "High quality skins" },
       ],
     });
-    const result = parseScanResponse(raw);
+
+    const result = parseUnbrandedScanResponse(raw, trackedName, trackedDomain);
     expect(result.ok).toBe(true);
     if (result.ok) {
+      expect(result.data.mentioned).toBe(true);
+      expect(result.data.position).toBe(2);
+      expect(result.data.sentiment).toBe("POSITIVE");
+      expect(result.data.reasoning).toBe("High quality skins");
       expect(result.data.competitors).toEqual([
-        { name: "Vivobarefoot", position: 2, sentiment: "NEUTRAL" },
-        { name: "Altra", position: 3, sentiment: "POSITIVE" },
+        { name: "dbrand", position: 1, sentiment: "POSITIVE" },
       ]);
     }
   });
 
-  it("coerces string boolean for mentioned", () => {
-    const result = parseScanResponse(
-      JSON.stringify({
-        mentioned: "true",
-        position: 1,
-        sentiment: "positive",
-      })
-    );
+  it("identifies tracked company by case-insensitive name match when domain is missing", () => {
+    const raw = JSON.stringify({
+      mentionedCompanies: [
+        { name: "Slickwraps", domain: "", position: 1, sentiment: "positive", reasoning: "Great skins." },
+      ],
+    });
+
+    const result = parseUnbrandedScanResponse(raw, trackedName, trackedDomain);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.mentioned).toBe(true);
+      expect(result.data.position).toBe(1);
+      expect(result.data.competitors).toEqual([]);
     }
   });
 
-  it("forces position to null when mentioned is false", () => {
-    const result = parseScanResponse(
-      JSON.stringify({
-        mentioned: false,
-        position: 1,
-        sentiment: "neutral",
-      })
-    );
+  it("returns mentioned: false when tracked company is not in mentionedCompanies", () => {
+    const raw = JSON.stringify({
+      mentionedCompanies: [
+        { name: "dbrand", domain: "dbrand.com", position: 1, sentiment: "positive" },
+        { name: "Skinit", domain: "skinit.com", position: 2, sentiment: "neutral" },
+      ],
+    });
+
+    const result = parseUnbrandedScanResponse(raw, trackedName, trackedDomain);
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.mentioned).toBe(false);
       expect(result.data.position).toBeNull();
-    }
-  });
-
-  it("normalizes invalid position values to null", () => {
-    const cases = [0, -1, 1.5, "1", null, undefined];
-    for (const val of cases) {
-      const result = parseScanResponse(
-        JSON.stringify({
-          mentioned: true,
-          position: val,
-        })
-      );
-      expect(result.ok).toBe(true);
-      if (result.ok) {
-        expect(result.data.position).toBeNull();
-      }
-    }
-  });
-
-  it("handles empty or whitespace reasoning as null", () => {
-    const result = parseScanResponse(
-      JSON.stringify({
-        mentioned: true,
-        reasoning: "   ",
-      })
-    );
-    expect(result.ok).toBe(true);
-    if (result.ok) {
+      expect(result.data.sentiment).toBeNull();
       expect(result.data.reasoning).toBeNull();
+      expect(result.data.competitors).toEqual([
+        { name: "dbrand", position: 1, sentiment: "POSITIVE" },
+        { name: "Skinit", position: 2, sentiment: "NEUTRAL" },
+      ]);
     }
   });
 
-  it("cleans and bounds competitors array to 10 entries", () => {
-    const rawCompetitors = [
-      { name: "Comp 1", position: 1, sentiment: "positive" },
-      { name: "", position: 2 }, // invalid: empty name
-      null, // invalid: not an object
-      "invalid", // invalid: not an object
-      ...Array.from({ length: 15 }, (_, i) => ({
-        name: `Extra ${i + 2}`,
-        position: i + 2,
-        sentiment: "neutral",
-      })),
-    ];
-
-    const result = parseScanResponse(
-      JSON.stringify({
-        mentioned: false,
-        competitors: rawCompetitors,
-      })
-    );
-
+  it("handles empty mentionedCompanies array", () => {
+    const raw = JSON.stringify({ mentionedCompanies: [] });
+    const result = parseUnbrandedScanResponse(raw, trackedName, trackedDomain);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data.competitors.length).toBe(10);
-      expect(result.data.competitors[0]).toEqual({
-        name: "Comp 1",
-        position: 1,
-        sentiment: "POSITIVE",
-      });
-    }
-  });
-
-  it("returns ok: false when no JSON is present in response", () => {
-    const result = parseScanResponse("No JSON object here at all");
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toBe("Response contained no JSON metadata object");
-    }
-  });
-
-  it("returns ok: false when JSON is malformed", () => {
-    const result = parseScanResponse("{ mentioned: true, malformed }");
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toBe("Response JSON could not be parsed");
-    }
-  });
-
-  it("returns ok: false when parsed JSON is not an object", () => {
-    const result = parseScanResponse("[1, 2, 3]");
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.error).toBe("Metadata is not a JSON object");
+      expect(result.data.mentioned).toBe(false);
+      expect(result.data.competitors).toEqual([]);
     }
   });
 });

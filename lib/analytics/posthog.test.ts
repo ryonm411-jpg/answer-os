@@ -8,6 +8,7 @@ class MockPostHog {
   identify = mockIdentify;
   capture = mockCapture;
   shutdown = mockShutdown;
+  flush = vi.fn().mockResolvedValue(undefined);
 }
 
 vi.mock("posthog-node", () => ({
@@ -22,8 +23,8 @@ describe("lib/analytics/posthog", () => {
 
   describe("when env vars are missing", () => {
     it("trackEvent is a no-op", async () => {
-      vi.stubEnv("POSTHOG_KEY", "");
-      vi.stubEnv("POSTHOG_HOST", "");
+      vi.stubEnv("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "");
+      vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "");
 
       const { trackEvent } = await import("./posthog");
       trackEvent("test_event", "user-123");
@@ -32,8 +33,8 @@ describe("lib/analytics/posthog", () => {
     });
 
     it("identifyUser is a no-op", async () => {
-      vi.stubEnv("POSTHOG_KEY", "");
-      vi.stubEnv("POSTHOG_HOST", "");
+      vi.stubEnv("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "");
+      vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "");
 
       const { identifyUser } = await import("./posthog");
       identifyUser("user-123");
@@ -42,8 +43,8 @@ describe("lib/analytics/posthog", () => {
     });
 
     it("shutdownPosthog is a no-op", async () => {
-      vi.stubEnv("POSTHOG_KEY", "");
-      vi.stubEnv("POSTHOG_HOST", "");
+      vi.stubEnv("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "");
+      vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "");
 
       const { shutdownPosthog } = await import("./posthog");
       shutdownPosthog();
@@ -54,8 +55,8 @@ describe("lib/analytics/posthog", () => {
 
   describe("when env vars are present", () => {
     beforeEach(() => {
-      vi.stubEnv("POSTHOG_KEY", "phk_test-key");
-      vi.stubEnv("POSTHOG_HOST", "https://us.i.posthog.com");
+      vi.stubEnv("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "phk_test-key");
+      vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "https://us.i.posthog.com");
     });
 
     afterEach(() => {

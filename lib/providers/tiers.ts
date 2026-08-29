@@ -1,7 +1,6 @@
 import type { AIProviderName } from "./types";
 
 export const FREE_PROVIDERS: AIProviderName[] = [
-  "openai",
   "gemini",
   "groq",
   "nvidia",
@@ -9,6 +8,7 @@ export const FREE_PROVIDERS: AIProviderName[] = [
 ];
 
 export const PREMIUM_PROVIDERS: AIProviderName[] = [
+  "openai",
   "anthropic",
   "perplexity",
 ];

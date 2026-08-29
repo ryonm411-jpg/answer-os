@@ -1,17 +1,47 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ScoredScan } from "@/lib/scoring/calculator";
 
 interface VisibilityScoreCardProps {
   score: ScoredScan | null;
+  brandedScore?: ScoredScan | null;
+  unbrandedScore?: ScoredScan | null;
   completedAt: string | null;
+  activeTab?: "overall" | "branded" | "organic";
+  onTabChange?: (tab: "overall" | "branded" | "organic") => void;
 }
 
-export function VisibilityScoreCard({ score, completedAt }: VisibilityScoreCardProps) {
-  const numericScore = score?.score ?? null;
+export function VisibilityScoreCard({
+  score,
+  brandedScore,
+  unbrandedScore,
+  completedAt,
+  activeTab: controlledTab,
+  onTabChange,
+}: VisibilityScoreCardProps) {
+  const [localTab, setLocalTab] = useState<"overall" | "branded" | "organic">("overall");
+  const activeTab = controlledTab ?? localTab;
+  const handleTabChange = (val: "overall" | "branded" | "organic") => {
+    if (onTabChange) {
+      onTabChange(val);
+    } else {
+      setLocalTab(val);
+    }
+  };
+
+  const currentScoreObj =
+    activeTab === "branded"
+      ? brandedScore ?? null
+      : activeTab === "organic"
+      ? unbrandedScore ?? null
+      : score ?? null;
+
+  const numericScore = currentScoreObj?.score ?? null;
 
   // Determine score color badge/ring status
   const getScoreColorClass = (val: number | null) => {
@@ -29,6 +59,19 @@ export function VisibilityScoreCard({ score, completedAt }: VisibilityScoreCardP
     return "Low AI Visibility";
   };
 
+  const getTabDescription = () => {
+    if (numericScore === null) {
+      return "Run a scan across tested AI providers to calculate your business visibility score.";
+    }
+    if (activeTab === "branded") {
+      return "Measures how favorably AI engines respond when buyers explicitly ask about your brand name in their question.";
+    }
+    if (activeTab === "organic") {
+      return "Measures how often AI models organically recommend your brand when buyers search for solutions without mentioning your name.";
+    }
+    return "Combines mention rate, position rank, sentiment tone, competitor share, and source authority across all tested prompts.";
+  };
+
   return (
     <Card className="border-border bg-card/60 backdrop-blur-sm relative overflow-hidden flex flex-col justify-between">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -44,11 +87,27 @@ export function VisibilityScoreCard({ score, completedAt }: VisibilityScoreCardP
           </Tooltip>
         </CardTitle>
 
-        {numericScore !== null && (
-          <span className="text-xs font-medium text-muted-foreground">
-            {completedAt ? `Scanned ${new Date(completedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "Scale: 0–100"} (MVP Ceiling: 95)
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as "overall" | "branded" | "organic")}>
+            <TabsList className="h-7 p-0.5 bg-muted/60">
+              <TabsTrigger value="overall" className="text-xs h-6 px-2">
+                Overall
+              </TabsTrigger>
+              <TabsTrigger value="branded" className="text-xs h-6 px-2">
+                Branded
+              </TabsTrigger>
+              <TabsTrigger value="organic" className="text-xs h-6 px-2">
+                Organic
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {numericScore !== null && (
+            <span className="text-xs font-medium text-muted-foreground hidden sm:inline">
+              {completedAt ? `Scanned ${new Date(completedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "Scale: 0–100"} (MVP Ceiling: 95)
+            </span>
+          )}
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-4 pt-2">
@@ -70,13 +129,16 @@ export function VisibilityScoreCard({ score, completedAt }: VisibilityScoreCardP
           </div>
 
           <div className="space-y-1.5 min-w-0 flex-1">
-            <div className="text-lg font-semibold text-foreground">
-              {getScoreLabel(numericScore)}
+            <div className="flex items-center gap-2">
+              <div className="text-lg font-semibold text-foreground">
+                {getScoreLabel(numericScore)}
+              </div>
+              <span className="text-xs font-medium text-muted-foreground capitalize">
+                ({activeTab})
+              </span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              {numericScore !== null
-                ? "Combines mention rate, position rank, sentiment tone, competitor share, and source authority across tested prompts."
-                : "Run a scan across tested AI providers to calculate your business visibility score."}
+              {getTabDescription()}
             </p>
 
             {numericScore !== null && numericScore >= 90 && (

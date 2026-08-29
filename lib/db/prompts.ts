@@ -1,4 +1,6 @@
 import { prisma } from "./prisma";
+import type { PromptType } from "@/generated/prisma";
+import { classifyPromptType } from "@/lib/prompts/classify";
 import type { PromptIntent } from "@/lib/prompts/intent";
 import { INTENT_RELEVANCE_DEFAULTS } from "@/lib/prompts/intent";
 
@@ -6,6 +8,7 @@ export interface PromptSuggestionInput {
   text: string;
   category: string;
   intent?: PromptIntent;
+  promptType?: PromptType;
   demandScore?: number | null;
   businessRelevance?: number | null;
 }
@@ -17,8 +20,7 @@ export interface PromptSuggestionInput {
  *   - Global curated prompts (companyId IS NULL)
  *   - Company-owned prompts (companyId = currentCompanyId)
  *
- * Excludes archived prompts. The `archivedAt IS NULL` filter is applied
- * OUTSIDE the ownership OR so archived curated prompts are also excluded (spec §21).
+ * Excludes archived prompts.
  */
 export async function getPromptsForCompany(companyId: string) {
   return prisma.prompt.findMany({
@@ -44,8 +46,7 @@ export async function getCompanySuggestions(companyId: string) {
 /**
  * Adds a USER_CUSTOM prompt for a company.
  *
- * Calculates initial `businessRelevance` server-side from the intent default.
- * The caller must have already validated text length, intent, and uniqueness.
+ * Classifies promptType (BRANDED vs UNBRANDED) automatically if not supplied.
  */
 export async function addUserCustomPrompt(
   companyId: string,
@@ -53,17 +54,23 @@ export async function addUserCustomPrompt(
     text: string;
     category: string;
     intent: PromptIntent;
-  }
+    promptType?: PromptType;
+  },
+  companyName?: string,
+  companyDomain?: string
 ) {
   const businessRelevance = INTENT_RELEVANCE_DEFAULTS[input.intent];
-  // Neutral demand fallback (spec §13): 50 until an AI estimate is available.
   const demandScore = 50;
+  const promptType =
+    input.promptType ||
+    classifyPromptType(input.text, companyName || "", companyDomain || "");
 
   return prisma.prompt.create({
     data: {
       companyId,
       source: "USER_CUSTOM",
       intent: input.intent,
+      promptType,
       text: input.text.trim(),
       category: input.category || "Other",
       demandScore,
@@ -73,10 +80,7 @@ export async function addUserCustomPrompt(
 }
 
 /**
- * Updates a company-owned prompt's text, category, and/or intent.
- *
- * Resets `demandScore` and `businessRelevance` when intent changes because the
- * stored estimate is no longer valid for the new intent context.
+ * Updates a company-owned prompt's text, category, intent, and/or promptType.
  */
 export async function updateCompanyPrompt(
   promptId: string,
@@ -85,16 +89,25 @@ export async function updateCompanyPrompt(
     text?: string;
     category?: string;
     intent?: PromptIntent;
-  }
+    promptType?: PromptType;
+  },
+  companyName?: string,
+  companyDomain?: string
 ) {
   const data: Record<string, unknown> = {};
-  if (changes.text !== undefined) data.text = changes.text.trim();
+  if (changes.text !== undefined) {
+    const trimmed = changes.text.trim();
+    data.text = trimmed;
+    if (!changes.promptType && companyName && companyDomain) {
+      data.promptType = classifyPromptType(trimmed, companyName, companyDomain);
+    }
+  }
   if (changes.category !== undefined) data.category = changes.category;
+  if (changes.promptType !== undefined) data.promptType = changes.promptType;
   if (changes.intent !== undefined) {
     data.intent = changes.intent;
-    // Recalculate relevance from the new intent default (spec §22.3).
     data.businessRelevance = INTENT_RELEVANCE_DEFAULTS[changes.intent];
-    data.demandScore = 50; // reset to neutral until regenerated
+    data.demandScore = 50;
   }
 
   return prisma.prompt.update({
@@ -104,9 +117,7 @@ export async function updateCompanyPrompt(
 }
 
 /**
- * Archives a company-owned prompt (spec §21).
- *
- * Does NOT hard-delete — historical ScanResult rows remain intact.
+ * Archives a company-owned prompt.
  */
 export async function archiveCompanyPrompt(promptId: string, companyId: string) {
   return prisma.prompt.update({
@@ -117,17 +128,13 @@ export async function archiveCompanyPrompt(promptId: string, companyId: string) 
 
 /**
  * Adds new AI-suggested prompts additively without replacing existing ones.
- *
- * Skips any suggestion whose normalized text already exists in the active
- * prompt set for this company (curated or company-owned).
- *
- * Replaces the old destructive `replaceCompanySuggestions` behavior (spec §8).
  */
 export async function addNewAiSuggestions(
   companyId: string,
-  suggestions: PromptSuggestionInput[]
+  suggestions: PromptSuggestionInput[],
+  companyName?: string,
+  companyDomain?: string
 ) {
-  // Fetch ALL prompts for this company (active and archived)
   const allCompanyPrompts = await prisma.prompt.findMany({
     where: { OR: [{ companyId }, { companyId: null }] },
   });
@@ -138,7 +145,7 @@ export async function addNewAiSuggestions(
       .map((p) => normalizeText(p.text))
   );
 
-  const archivedMap = new Map<string, string>(); // normalizedText -> promptId
+  const archivedMap = new Map<string, string>();
   allCompanyPrompts
     .filter((p) => p.archivedAt !== null && p.companyId === companyId)
     .forEach((p) => {
@@ -151,7 +158,7 @@ export async function addNewAiSuggestions(
   for (const s of suggestions) {
     const norm = normalizeText(s.text);
     if (activeTexts.has(norm)) {
-      continue; // already active in workspace
+      continue;
     }
     if (archivedMap.has(norm)) {
       toUnarchiveIds.push(archivedMap.get(norm)!);
@@ -173,6 +180,9 @@ export async function addNewAiSuggestions(
         companyId,
         source: "AI_SUGGESTED" as const,
         intent: (s.intent as PromptIntent) ?? "PRODUCT",
+        promptType:
+          s.promptType ??
+          classifyPromptType(s.text, companyName || "", companyDomain || ""),
         text: s.text.trim(),
         category: s.category || "Other",
         demandScore: s.demandScore ?? 50,
@@ -195,12 +205,13 @@ export async function addNewAiSuggestions(
   return { count: totalAddedOrRestored, prompts: activePrompts };
 }
 
-/** Legacy export kept for backward-compatibility with onboarding route. */
 export async function replaceCompanySuggestions(
   companyId: string,
-  suggestions: PromptSuggestionInput[]
+  suggestions: PromptSuggestionInput[],
+  companyName?: string,
+  companyDomain?: string
 ) {
-  return addNewAiSuggestions(companyId, suggestions);
+  return addNewAiSuggestions(companyId, suggestions, companyName, companyDomain);
 }
 
 function normalizeText(text: string): string {
