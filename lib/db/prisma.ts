@@ -3,7 +3,7 @@ import { PrismaNeon } from "@prisma/adapter-neon";
 import { PrismaClient } from "@/generated/prisma";
 import ws from "ws";
 
-// Configure WebSockets for serverless PostgreSQL in Node environment
+// Configure WebSockets for serverless PostgreSQL in Node environments (like Trigger.dev)
 if (typeof window === "undefined") {
   neonConfig.webSocketConstructor = ws;
 }
@@ -13,13 +13,10 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createPrismaClient(): PrismaClient {
-  const connectionString = process.env.DATABASE_URL;
+  // Use a fallback placeholder string if the env variable isn't loaded yet (e.g., inside isolated build environments)
+  const connectionString = process.env.DATABASE_URL || "postgresql://placeholder:placeholder@localhost:5432/placeholder";
 
-  // Fallback to standard PrismaClient if DATABASE_URL is not set (e.g. build step)
-  if (!connectionString) {
-    return new PrismaClient();
-  }
-
+  // Always supply the adapter options object to satisfy Prisma 7 constraints
   const adapter = new PrismaNeon({ connectionString });
   return new PrismaClient({ adapter });
 }
