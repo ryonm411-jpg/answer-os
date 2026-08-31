@@ -16,7 +16,7 @@ export function buildScanPrompt({ question, companyName, companyDomain }: ScanPr
     ``,
     `Question: "${question}"`,
     ``,
-    `Answer the question as you normally would. At the very end of your answer, output a single JSON object with EXACTLY this shape and no markdown fences:`,
+    `Answer the question as you normally would. At the very end of your response, you MUST output a single JSON object with EXACTLY this shape (no extra prose after the JSON):`,
     `{"mentioned": true, "position": 1, "sentiment": "positive", "reasoning": "short sentence", "competitors": [{"name": "OtherCo", "position": 2, "sentiment": "neutral"}]}`,
     ``,
     `We are tracking how often "${companyName}" (${companyDomain}) is recommended.`,
@@ -25,6 +25,7 @@ export function buildScanPrompt({ question, companyName, companyDomain }: ScanPr
     `- "sentiment": your overall sentiment toward ${companyName}: "positive", "neutral", or "negative"; null when not mentioned`,
     `- "reasoning": one short sentence explaining your evaluation of ${companyName}; null when not mentioned`,
     `- "competitors": every OTHER company you mentioned, each with "name", "position", and "sentiment" using the same rules`,
+    `- CRITICAL: Do not omit the JSON object. It must be present at the end of your response.`,
   ].join("\n");
 }
 
@@ -45,7 +46,7 @@ export function buildUnbrandedScanPrompt({
     ``,
     `Answer the question as you normally would — recommend the best options based on your knowledge. Do not mention any specific company unless it genuinely belongs in your answer.`,
     ``,
-    `At the very end of your answer, output a single JSON object with EXACTLY this shape and no markdown fences:`,
+    `At the very end of your response, you MUST output a single JSON object with EXACTLY this shape (no extra prose after the JSON):`,
     `{"mentionedCompanies": [{"name": "CompanyName", "domain": "example.com", "position": 1, "sentiment": "positive", "reasoning": "short sentence"}]}`,
     ``,
     `Rules for the JSON metadata:`,
@@ -54,5 +55,6 @@ export function buildUnbrandedScanPrompt({
     `- Include ALL companies, not just the tracked one`,
     `- If you did not mention any specific companies, return {"mentionedCompanies": []}`,
     `- We will match companies by name and domain after parsing — do not alter your answer to favor any specific company`,
+    `- CRITICAL: Do not omit the JSON object. It must be present at the end of your response.`,
   ].join("\n");
 }

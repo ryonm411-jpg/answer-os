@@ -98,28 +98,24 @@ async function scanPrompt(input: {
   try {
     const isBranded = prompt.promptType === "BRANDED";
 
+    const questionText =
+      profile.tier === "free" && prompt.text.length > 500
+        ? prompt.text.slice(0, 500)
+        : prompt.text;
+
     const scanText = isBranded
       ? buildScanPrompt({
-          question: prompt.text,
+          question: questionText,
           companyName: company.name,
           companyDomain: company.domain,
         })
       : buildUnbrandedScanPrompt({
-          question: prompt.text,
+          question: questionText,
           companyName: company.name,
           companyDomain: company.domain,
         });
 
-    // Free tier restriction: compact oversized prompts to 1,200 chars max to protect shared free API keys
-    let finalScanText = scanText;
-    if (profile.tier === "free" && scanText.length > 1200) {
-      finalScanText = scanText.slice(0, 1200);
-      logger.info("Compacted free tier prompt text", {
-        provider: provider.name,
-        originalLength: scanText.length,
-        compactedLength: finalScanText.length,
-      });
-    }
+    const finalScanText = scanText;
 
     // Pre-dispatch token/request budgeting: check estimated payload size
     const estimatedInputTokens = Math.ceil(finalScanText.length / 4);
