@@ -131,6 +131,12 @@ Update this file after every meaningful implementation change.
     6. Unit Test Coverage: Created `lib/providers/profiles.test.ts` and updated `lib/providers/tiers.test.ts` — all 136 tests passing across 25 test files; `npx tsc --noEmit` clean.
     7. Documented Feature Spec 23 (`context/features-specs/23-ai-provider-strategy.md`): Formatted provider roles, limitations, concurrency & token budgeting rules, non-blocking execution invariants, and user-facing reporting principles.
 
+- Implemented Deploy to Vercel (Production) (`context/features-specs/24-deploy-vercel.md`):
+    1. Configured build command in `package.json` to `"npx prisma generate && next build"` ensuring Prisma client generation runs prior to Next.js compilation on Vercel production deployments.
+    2. Updated `lib/analytics/posthog-client.tsx` to read `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN || NEXT_PUBLIC_POSTHOG_KEY` aligning client and server PostHog configuration.
+    3. Documented deploy workflow (Vercel app + Trigger.dev worker sync, `prisma migrate deploy` on production Neon branch, environment variables configuration, and post-deploy smoke check checklist).
+    4. Verified typescript check (`npx tsc --noEmit`), linting (`npm run lint`), unit test suite (`npm test`), and local production build (`npm run build`).
+
 ## In Progress
 
 - None.
@@ -138,7 +144,6 @@ Update this file after every meaningful implementation change.
 ## Next Up
 
 1. Implement weekly email reports via Resend
-2. Deploy to Vercel production
 
 ## Open Questions
 
@@ -219,3 +224,5 @@ Update this file after every meaningful implementation change.
 - Wrote Branded vs Unbranded Prompts spec (2026-08-27): Created `22-branded-vs-unbranded-prompts.md` — closes spec 12's open question on scan-prompt bias by introducing a `PromptType` enum (`BRANDED` / `UNBRANDED`) on the `Prompt` model, a pure text classifier (`lib/prompts/classify.ts`), a non-injective scan prompt variant (`buildUnbrandedScanPrompt`) for unbranded queries that asks the AI to report all mentioned companies and identifies the tracked company via domain/name matching after parsing, separate branded/organic/overall Visibility Scores, and branded/organic badges + filters in the prompt workspace UI. Decisions: unbranded is the default `PromptType` (safer — avoids accidentally injecting company names into organic-discovery prompts), deterministic word-boundary text classification (no AI call), and the non-injective response parser reuses the same `ParsedScanResponse` output shape so the rest of the pipeline is unchanged. Resolves the scan-prompt bias open question from spec 12. Also established recommendations philosophy: evidence → diagnosis → action (never unsupported claims like "Do X and you will rank #1"). Primary organic visibility measurement uses unbranded prompts (e.g., "What are the best laptop skin companies?") rather than branded prompts (e.g., "Where to buy Slickwraps laptop skins?") for more meaningful metrics.
 - Dashboard API empty company fetch guard fix (2026-08-28): Guarded `useEffect` in `components/dashboard/dashboard-content.tsx` with `if (!currentCompany)` to prevent fetching `/api/dashboard/trend` and `/api/dashboard/sources` when no company domain is registered (e.g., post domain deletion). Fixed 404 "Company not found" console error. All 132 unit tests passing.
 - Synchronized Dashboard Prompt Scope Filter (2026-08-28): Added `promptType` filtering (`all`, `organic`, `branded`) to `OverviewFilterBar`, `getMultiBrandScoreHistory`, `getCompetitorLeaderboard`, and `getSourcesSummary`. Default view set to **All Prompts** (`all`) so all competitors across all scan prompts remain visible by default, while allowing users to filter by **Organic** or **Branded** on demand. Verified with 132 passing unit tests.
+- Completed Deploy to Vercel (Production) (`24-deploy-vercel.md`): Prepared package.json build script with `npx prisma generate && next build`, added `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` fallback to `posthog-client.tsx`, verified production build locally (`npm run build`), typescript (`npx tsc --noEmit`), linting (`npm run lint`), and tests (`npm test`). Provided end-to-end beginner setup guide and environment variable configuration mapping.
+- Increased Gemini Provider Timeout Limit (2026-08-31): Updated `requestTimeoutMs` for `gemini` (and `openrouter`) in `lib/providers/profiles.ts` from 30s (`30_000` ms) to 60s (`60_000` ms) and `DEFAULT_TIMEOUT_MS` in `lib/providers/config.ts` to 60s. Resolved production scan execution timeout errors for long-form reasoning prompts on Gemini. Committed and pushed to `master` branch. All 31 provider unit tests passing.
