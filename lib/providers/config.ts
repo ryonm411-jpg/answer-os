@@ -12,7 +12,7 @@ export const DEFAULT_MODELS: Record<AIProviderName, string> = {
 
 export const DEFAULT_MAX_TOKENS = 2048;
 export const DEFAULT_TEMPERATURE = 0.2;
-export const DEFAULT_TIMEOUT_MS = 30_000;
+export const DEFAULT_TIMEOUT_MS = 60_000;
 
 export function resolveModel(
   name: AIProviderName,

@@ -50,7 +50,7 @@ export const PROVIDER_PROFILES: Record<AIProviderName, ProviderProfile> = {
     maxConcurrency: 2,
     requestsPerMinute: 20,
     tokensPerMinute: 30000,
-    requestTimeoutMs: 30_000,
+    requestTimeoutMs: 60_000,
     maxRetries: 3,
   },
   groq: {
@@ -104,7 +104,7 @@ export const PROVIDER_PROFILES: Record<AIProviderName, ProviderProfile> = {
     maxConcurrency: 2,
     requestsPerMinute: 20,
     tokensPerMinute: 15000,
-    requestTimeoutMs: 30_000,
+    requestTimeoutMs: 60_000,
     maxRetries: 2,
   },
   openai: {
