@@ -39,11 +39,13 @@ async function askWithRetry(provider: AIProvider, prompt: string): Promise<AIRes
   const profile = getProviderProfile(provider.name);
   let lastError: unknown;
   const maxAttempts = profile.maxRetries;
+  // Tailor maxTokens per provider: Groq free tier enforces strict TPM limits (8,000 TPM)
+  const maxTokens = provider.name === "groq" ? 1500 : SCAN_MAX_TOKENS;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
       return await provider.ask(prompt, {
-        maxTokens: SCAN_MAX_TOKENS,
+        maxTokens,
         temperature: SCAN_TEMPERATURE,
         timeoutMs: profile.requestTimeoutMs,
       });
@@ -51,10 +53,22 @@ async function askWithRetry(provider: AIProvider, prompt: string): Promise<AIRes
       lastError = error;
       const retryable = error instanceof AIProviderError && error.retryable;
       if (!retryable || attempt === maxAttempts - 1) throw error;
-      const backoff = Math.min(SCAN_RETRY_BASE_MS * 2 ** attempt, SCAN_RETRY_MAX_MS);
+
+      const isRateLimit =
+        error instanceof AIProviderError &&
+        (error.statusCode === 429 ||
+          error.message.includes("429") ||
+          error.message.toLowerCase().includes("rate limit") ||
+          error.message.toLowerCase().includes("quota"));
+
+      const backoff = isRateLimit
+        ? Math.min(15_000 * (attempt + 1), 35_000)
+        : Math.min(SCAN_RETRY_BASE_MS * 2 ** attempt, SCAN_RETRY_MAX_MS);
+
       logger.warn("Provider call retrying", {
         provider: provider.name,
         attempt: attempt + 1,
+        isRateLimit,
         backoffMs: backoff,
       });
       await sleep(backoff);
@@ -249,7 +263,7 @@ export const runScan = task({
           const batchResults = await Promise.all(batch);
           results.push(...batchResults);
           if (i + concurrency < providerTasks.length) {
-            const delayMs = profile.tier === "free" ? 1200 : 250;
+            const delayMs = profile.tier === "free" ? 2000 : 250;
             await sleep(delayMs);
           }
         }
