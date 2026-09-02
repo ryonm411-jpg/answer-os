@@ -20,7 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { FailedChecksDialog } from "@/components/dashboard/failed-checks-dialog";
+import { FailedChecksModal } from "@/components/dashboard/failed-checks-modal";
 
 interface ScanRecord {
   id: string;
@@ -308,12 +308,13 @@ export default function ScanHistoryPage() {
       </Card>
 
       {/* Failed Checks Inspection Dialog */}
-      {inspectScanId && (
-        <FailedChecksDialog
-          scanId={inspectScanId}
-          onClose={() => setInspectScanId(null)}
-        />
-      )}
+      <FailedChecksModal
+        open={Boolean(inspectScanId)}
+        onOpenChange={(open) => {
+          if (!open) setInspectScanId(null);
+        }}
+        scanId={inspectScanId}
+      />
     </div>
   );
 }
