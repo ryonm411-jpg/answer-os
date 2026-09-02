@@ -59,8 +59,27 @@ export default function ScanHistoryPage() {
   }, []);
 
   React.useEffect(() => {
-    fetchScans();
-  }, [fetchScans]);
+    let isMounted = true;
+    fetch("/api/scans")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (isMounted && json?.data) {
+          setScans(json.data);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch scan history:", err);
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleTriggerScan = async () => {
     setIsTriggering(true);
