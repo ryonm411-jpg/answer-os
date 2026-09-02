@@ -45,7 +45,6 @@ export default function ScanHistoryPage() {
   const [inspectScanId, setInspectScanId] = React.useState<string | null>(null);
 
   const fetchScans = React.useCallback(async () => {
-    setIsLoading(true);
     try {
       const res = await fetch("/api/scans");
       if (res.ok) {
