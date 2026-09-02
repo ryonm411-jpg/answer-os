@@ -10,6 +10,7 @@ import {
   Clock,
   RefreshCw,
   Zap,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FailedChecksModal } from "@/components/dashboard/failed-checks-modal";
+import { ScanDetailsModal } from "@/components/dashboard/scan-details-modal";
 
 interface ScanRecord {
   id: string;
@@ -43,6 +45,7 @@ export default function ScanHistoryPage() {
   const [isTriggering, setIsTriggering] = React.useState(false);
   const [triggerError, setTriggerError] = React.useState<string | null>(null);
   const [inspectScanId, setInspectScanId] = React.useState<string | null>(null);
+  const [detailsScanId, setDetailsScanId] = React.useState<string | null>(null);
 
   const fetchScans = React.useCallback(async () => {
     try {
@@ -215,11 +218,11 @@ export default function ScanHistoryPage() {
             </CardDescription>
             <CardTitle className="text-2xl font-bold flex items-center gap-1.5">
               <Zap className="h-4 w-4 text-amber-400" />
-              <span>3 Active</span>
+              <span>Active Pool</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="text-xs text-muted-foreground">
-            Gemini, Groq LPU, NVIDIA NIM
+            Gemini, Groq LPU, NVIDIA NIM, OpenRouter, OpenAI, Claude, Perplexity
           </CardContent>
         </Card>
       </div>
@@ -229,7 +232,7 @@ export default function ScanHistoryPage() {
         <CardHeader>
           <CardTitle className="text-base font-semibold">Scan Execution Logs</CardTitle>
           <CardDescription className="text-xs">
-            Detailed view of each visibility scan batch, completion rate, and rate-limit error telemetry.
+            Detailed view of each visibility scan batch, completion rate, and rate-limit error telemetry. Click any row to view full model results and tested prompts.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -243,7 +246,7 @@ export default function ScanHistoryPage() {
               <History className="h-8 w-8 mx-auto text-muted-foreground/50" />
               <p className="font-medium text-foreground">No scan history recorded yet</p>
               <p className="text-xs max-w-sm mx-auto">
-                Trigger your first AI visibility scan to measure brand mentions across Gemini, Groq, and NVIDIA NIM.
+                Trigger your first AI visibility scan to measure brand mentions across active AI models.
               </p>
               <Button size="sm" onClick={handleTriggerScan} disabled={isTriggering}>
                 Run First Scan
@@ -262,7 +265,8 @@ export default function ScanHistoryPage() {
               {scans.map((scan) => (
                 <div
                   key={scan.id}
-                  className="grid grid-cols-12 px-6 py-4 items-center text-sm hover:bg-muted/20 transition-colors"
+                  onClick={() => setDetailsScanId(scan.id)}
+                  className="grid grid-cols-12 px-6 py-4 items-center text-sm hover:bg-muted/30 cursor-pointer transition-colors"
                 >
                   <div className="col-span-3">
                     <div className="font-medium text-foreground text-xs">
@@ -302,18 +306,34 @@ export default function ScanHistoryPage() {
                   </div>
 
                   <div className="col-span-3 flex items-center justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDetailsScanId(scan.id);
+                      }}
+                      className="text-xs gap-1.5 hover:bg-primary/10 hover:text-primary"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      <span>Details</span>
+                    </Button>
+
                     {scan.failedChecks > 0 ? (
                       <Button
                         variant="outline"
                         size="xs"
-                        onClick={() => setInspectScanId(scan.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInspectScanId(scan.id);
+                        }}
                         className="text-xs border-amber-500/40 text-amber-400 hover:bg-amber-500/10 gap-1.5"
                       >
                         <AlertTriangle className="h-3.5 w-3.5" />
-                        <span>Inspect ({scan.failedChecks})</span>
+                        <span>Errors ({scan.failedChecks})</span>
                       </Button>
                     ) : (
-                      <span className="text-xs text-emerald-400/80 flex items-center gap-1 font-medium">
+                      <span className="text-xs text-emerald-400/80 flex items-center gap-1 font-medium ml-1">
                         <CheckCircle2 className="h-3.5 w-3.5" /> Clean
                       </span>
                     )}
@@ -324,6 +344,15 @@ export default function ScanHistoryPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Full Scan Telemetry & Prompt Results Modal */}
+      <ScanDetailsModal
+        open={Boolean(detailsScanId)}
+        onOpenChange={(open) => {
+          if (!open) setDetailsScanId(null);
+        }}
+        scanId={detailsScanId}
+      />
 
       {/* Failed Checks Inspection Dialog */}
       <FailedChecksModal

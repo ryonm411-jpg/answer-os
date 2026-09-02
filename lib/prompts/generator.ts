@@ -181,9 +181,9 @@ export async function generatePromptSuggestions(
 
 CRITICAL INSTRUCTIONS:
 1. All generated questions MUST be strictly relevant to the company's Business Profile described below.
-2. BALANCE BRANDED AND UNBRANDED QUERIES:
-   - Provide 50% UNBRANDED category questions where the buyer is searching for solutions without mentioning the brand name (e.g., "What are the best barefoot shoes for trail running?", "Best zero-drop shoes for posture", "Top minimalist footwear for wide feet").
-   - Provide 50% BRANDED and COMPARISON questions that explicitly evaluate the company or compare it to competitors (e.g., "${input.companyName} vs Vivobarefoot", "Are ${input.companyName} good for long distance?").
+2. BALANCE BRANDED AND UNBRANDED QUERIES (80% ORGANIC / 20% BRANDED):
+   - Provide 80% UNBRANDED (Organic) category questions where the buyer is searching for solutions without mentioning any brand or company name (e.g., "What are the best barefoot shoes for trail running?", "Best zero-drop shoes for posture", "Top minimalist footwear for wide feet", "Best budget-friendly graphics cards for PC builds").
+   - Provide 20% BRANDED and COMPARISON questions that explicitly evaluate the company or compare it to competitors (e.g., "${input.companyName} vs Vivobarefoot", "Are ${input.companyName} good for long distance?", "${input.companyName} vs ${input.competitors[0]?.name || "competitor"}").
 3. NEVER generate questions about unrelated industries (for example, if the company sells shoes, do NOT generate CRM software questions).
 
 Company Context:
