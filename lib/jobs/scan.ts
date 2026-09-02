@@ -38,7 +38,7 @@ Sentry.init({
 async function askWithRetry(provider: AIProvider, prompt: string): Promise<AIResponse> {
   const profile = getProviderProfile(provider.name);
   let lastError: unknown;
-  const maxAttempts = profile.maxRetries;
+  const maxAttempts = profile.tier === "free" ? Math.min(profile.maxRetries, 2) : profile.maxRetries;
   // Tailor maxTokens per provider: Groq free tier enforces strict TPM limits (8,000 TPM)
   const maxTokens = provider.name === "groq" ? 1500 : SCAN_MAX_TOKENS;
 
@@ -62,7 +62,7 @@ async function askWithRetry(provider: AIProvider, prompt: string): Promise<AIRes
           error.message.toLowerCase().includes("quota"));
 
       const backoff = isRateLimit
-        ? Math.min(15_000 * (attempt + 1), 35_000)
+        ? (profile.tier === "free" ? Math.min(2_500 * (attempt + 1), 5_000) : Math.min(15_000 * (attempt + 1), 35_000))
         : Math.min(SCAN_RETRY_BASE_MS * 2 ** attempt, SCAN_RETRY_MAX_MS);
 
       logger.warn("Provider call retrying", {
@@ -194,22 +194,26 @@ async function scanPrompt(input: {
       citations,
     };
   } catch (error) {
-    if (error instanceof AIProviderError) {
-      return {
-        promptId: prompt.id,
-        provider: prismaProvider,
-        model: profile.model,
-        mentioned: false,
-        position: null,
-        sentiment: null,
-        reasoning: null,
-        rawResponse: null,
-        competitorsMentioned: null,
-        error: error.message,
-        citations: [],
-      };
-    }
-    throw error;
+    const errorMsg =
+      error instanceof AIProviderError
+        ? error.message
+        : error instanceof Error
+        ? error.message
+        : String(error);
+
+    return {
+      promptId: prompt.id,
+      provider: prismaProvider,
+      model: profile.model,
+      mentioned: false,
+      position: null,
+      sentiment: null,
+      reasoning: null,
+      rawResponse: null,
+      competitorsMentioned: null,
+      error: errorMsg,
+      citations: [],
+    };
   }
 }
 
