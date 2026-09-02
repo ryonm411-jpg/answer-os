@@ -226,4 +226,8 @@ Update this file after every meaningful implementation change.
     3. Updated `components/editor/editor-layout.tsx` layout flow to default `isSidebarOpen` to `true` on desktop, placing the navigation panel side-by-side with main content.
     4. Added `GET /api/scans` endpoint handler in `app/api/scans/route.ts` returning scan history execution summaries, total prompt checks, mentions, and failure counts.
     5. Built full Scan History page component at `app/(editor)/scans/page.tsx` displaying KPI metrics, interactive scan history table, trigger scan integration, and error inspection modal. All 25 test suites (136 tests) passing cleanly.
-
+- Fixed Trigger.dev 1-Hour Scan Job Timeout & Error Recovery (2026-09-01):
+    1. Diagnosed root cause of `MAX_DURATION_EXCEEDED` (3600s) timeouts on Trigger.dev: free-tier rate limits (429) previously triggered long 35s backoff sleeps repeated across multiple prompts/providers, exceeding the 1-hour execution ceiling.
+    2. Optimized `askWithRetry` in `lib/jobs/scan.ts`: capped `maxAttempts` for free-tier providers to 2, and reduced free-tier rate limit backoffs to 2.5s and 5.0s (instead of 35s), preventing jobs from hanging on rate limits.
+    3. Updated `scanPrompt` catch block to catch **all** errors (including generic network/fetch/timeout errors) and return a structured erring result row (`error: errorMessage`) instead of re-throwing. This prevents individual provider failures from rejecting `Promise.all` and triggering full task retry loops on Trigger.dev.
+    4. Refactored `app/(editor)/scans/page.tsx` data fetching in `useEffect` to use an `isMounted` promise chain, fixing all React hooks `set-state-in-effect` ESLint warnings.
