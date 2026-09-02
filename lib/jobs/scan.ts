@@ -263,7 +263,7 @@ export const runScan = task({
           const batchResults = await Promise.all(batch);
           results.push(...batchResults);
           if (i + concurrency < providerTasks.length) {
-            const delayMs = profile.tier === "free" ? 2000 : 250;
+            const delayMs = profile.tier === "free" ? 3500 : 250;
             await sleep(delayMs);
           }
         }

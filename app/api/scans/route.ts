@@ -15,6 +15,75 @@ import { captureApiError } from "@/lib/monitoring/sentry";
 import type { runScan } from "@/lib/jobs/scan";
 
 /**
+ * GET /api/scans
+ * Returns the list of scans and their execution summary for the authenticated user's company.
+ */
+export async function GET() {
+  const { userId: clerkId } = await auth();
+
+  if (!clerkId) {
+    return NextResponse.json(
+      { error: { message: "Unauthorized" } },
+      { status: 401 }
+    );
+  }
+
+  const company = await getCompanyByClerkId(clerkId);
+  if (!company) {
+    return NextResponse.json(
+      { error: { message: "Company not found" } },
+      { status: 404 }
+    );
+  }
+
+  const scans = await prisma.scan.findMany({
+    where: { companyId: company.id },
+    orderBy: { createdAt: "desc" },
+    take: 50,
+    include: {
+      results: {
+        select: {
+          id: true,
+          provider: true,
+          model: true,
+          mentioned: true,
+          position: true,
+          sentiment: true,
+          error: true,
+        },
+      },
+    },
+  });
+
+  const formattedScans = scans.map((scan) => {
+    const totalChecks = scan.results.length;
+    const validChecks = scan.results.filter((r) => r.error === null);
+    const failedChecks = scan.results.filter((r) => r.error !== null);
+    const mentions = validChecks.filter((r) => r.mentioned);
+    const mentionRate = validChecks.length > 0 ? Math.round((mentions.length / validChecks.length) * 100) : 0;
+    const coverageRate = totalChecks > 0 ? Math.round((validChecks.length / totalChecks) * 100) : 0;
+    const providers = Array.from(new Set(scan.results.map((r) => r.provider)));
+
+    return {
+      id: scan.id,
+      status: scan.status,
+      createdAt: scan.createdAt.toISOString(),
+      startedAt: scan.startedAt ? scan.startedAt.toISOString() : scan.createdAt.toISOString(),
+      completedAt: scan.completedAt ? scan.completedAt.toISOString() : null,
+      totalChecks,
+      validChecks: validChecks.length,
+      failedChecks: failedChecks.length,
+      mentionsCount: mentions.length,
+      mentionRate,
+      coverageRate,
+      providers,
+    };
+  });
+
+  return NextResponse.json({ data: formattedScans });
+}
+
+/**
  * POST /api/scans
  * Triggers a new background scan job for the authenticated user's company.
  */

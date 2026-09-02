@@ -49,11 +49,7 @@ export function DashboardContent({ company, data }: DashboardContentProps) {
 
   // Refetch trend & sources when filters change
   useEffect(() => {
-    if (!currentCompany) {
-      setFetchedTrend(null);
-      setSourcesData(null);
-      return;
-    }
+    if (!currentCompany) return;
 
     let isMounted = true;
 
