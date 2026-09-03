@@ -7,6 +7,10 @@ export const EVENTS = {
   DOMAIN_UPDATED: "domain_updated",
   DOMAIN_REMOVED: "domain_removed",
 
+  // Landing Page
+  LANDING_VIEWED: "landing_viewed",
+  LANDING_CTA_CLICKED: "landing_cta_clicked",
+
   // Scans
   SCAN_INITIATED: "scan_initiated",
   SCAN_COMPLETED: "scan_completed",

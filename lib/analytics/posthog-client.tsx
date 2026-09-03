@@ -6,11 +6,14 @@ import { useEffect } from "react";
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    const token = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN || process.env.NEXT_PUBLIC_POSTHOG_KEY;
+    const token =
+      process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN ||
+      process.env.NEXT_PUBLIC_POSTHOG_KEY;
     if (!token) return;
 
     posthog.init(token, {
-      api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+      api_host:
+        process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
       person_profiles: "identified_only",
       capture_pageview: false,
       capture_pageleave: true,
@@ -19,4 +22,13 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return <PHProvider client={posthog}>{children}</PHProvider>;
+}
+
+export function trackClientEvent(
+  event: string,
+  properties?: Record<string, unknown>
+) {
+  if (typeof window !== "undefined") {
+    posthog.capture(event, properties);
+  }
 }

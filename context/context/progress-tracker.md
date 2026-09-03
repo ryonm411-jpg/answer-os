@@ -130,6 +130,12 @@ Update this file after every meaningful implementation change.
     2. Updated `lib/analytics/posthog-client.tsx` to read `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN || NEXT_PUBLIC_POSTHOG_KEY` aligning client and server PostHog configuration.
     3. Documented deploy workflow (Vercel app + Trigger.dev worker sync, `prisma migrate deploy` on production Neon branch, environment variables configuration, and post-deploy smoke check checklist).
     4. Verified typescript check (`npx tsc --noEmit`), linting (`npm run lint`), unit test suite (`npm test`), and local production build (`npm run build`).
+- Implemented Marketing Landing Page (`context/features-specs/25-landing-page.md`):
+    1. Replaced root `/` redirect stub with full-featured marketing landing page for anonymous visitors; authenticated users continue to automatically redirect to `/editor`.
+    2. Built 9 modular presentation components under `components/landing/` (`landing-navbar.tsx`, `landing-hero.tsx`, `how-it-works.tsx`, `score-explainer.tsx`, `feature-grid.tsx`, `who-its-for.tsx`, `pricing-teaser.tsx`, `faq.tsx`, `landing-footer.tsx`, `landing-tracker.tsx`).
+    3. Added `LANDING_VIEWED` and `LANDING_CTA_CLICKED` analytics event tracking via client-safe PostHog capture.
+    4. Exported SEO `metadata` on `app/page.tsx` with Open Graph tags.
+    5. Verified 136 unit tests passing (`npm test`), linting clean (`npm run lint`), TypeScript clean (`npx tsc --noEmit`), and production build clean (`npm run build`).
 
 ## In Progress
 
@@ -237,3 +243,4 @@ Update this file after every meaningful implementation change.
     3. Built Interactive Inspection Dialog (`components/dashboard/scan-details-modal.tsx`) with search, multi-engine filters, prompt-type filters (Organic vs Branded), outcome toggles (Mentions, Clean, Errors), and expandable per-model AI reasoning/citations accordion.
     4. Updated Scan History page (`app/(editor)/scans/page.tsx`) to make every scan record clickable with a dedicated "Details" inspection button.
     5. Verified 136 unit tests passing across 25 test files (`npm test`), linting clean (`npm run lint`), TypeScript check clean (`npx tsc --noEmit`), and production build succeeded (`npm run build`).
+- Wrote Landing Page spec (2026-09-02): Created `25-landing-page.md` — the marketing page at `/` that explains how the website works and how to use it (queued as Next Up #2, after the weekly email reports unit). Replaces the current `/` redirect stub (authed → `/editor`, anonymous → `/sign-in`) with a dark-themed, server-component landing page: hero, six-step **How it works** walkthrough mirroring the real product flow 1:1 (Sign up → Add domain → Review prompts → Run scan → Read visibility report → Act & track), honest visibility-score explainer (real factor weights + 95 MVP ceiling), feature grid (7 providers, Branded vs Organic, competitor leaderboard, top sources, recommendations), B2B positioning, pricing teaser (no dollar amount — price still an open question), native `<details>` FAQ, and footer. Decisions: anonymous visitors see the page while signed-in users still redirect to `/editor`; all CTAs reuse the existing `/sign-up` (→ onboarding) and `/sign-in` flows; components live in `components/landing/`; two new PostHog events (`LANDING_VIEWED`, `LANDING_CTA_CLICKED`) proposed per spec 21 conventions (no PII); SEO metadata export to be verified against the Next.js 16 docs at implementation time. No new dependencies and no implementation yet.
