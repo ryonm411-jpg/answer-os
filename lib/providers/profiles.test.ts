@@ -11,7 +11,7 @@ import { AIProviderError, toProviderError } from "./errors";
 describe("lib/providers/profiles", () => {
   it("defines exact canonical and auxiliary provider lists", () => {
     expect(CANONICAL_PROVIDERS).toEqual(["openai", "anthropic", "gemini", "perplexity"]);
-    expect(AUXILIARY_PROVIDERS).toEqual(["groq", "nvidia", "openrouter"]);
+    expect(AUXILIARY_PROVIDERS).toEqual(["groq", "nvidia"]);
   });
 
   it("identifies canonical vs auxiliary providers correctly", () => {
@@ -23,7 +23,6 @@ describe("lib/providers/profiles", () => {
 
     expect(isAuxiliaryProvider("groq")).toBe(true);
     expect(isAuxiliaryProvider("nvidia")).toBe(true);
-    expect(isAuxiliaryProvider("openrouter")).toBe(true);
     expect(isAuxiliaryProvider("openai")).toBe(false);
   });
 

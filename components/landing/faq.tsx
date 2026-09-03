@@ -7,7 +7,7 @@ const FAQS = [
   {
     question: "What does AnswerOS actually scan?",
     answer:
-      "AnswerOS scans buyer-intent questions across up to 7 AI search providers (Google Gemini, Groq, NVIDIA NIM, OpenRouter, OpenAI, Anthropic Claude, and Perplexity). Each check evaluates whether your brand is mentioned, at what position, with what sentiment, and what competitors/citations appear. Results are cached in Redis with a 24-hour TTL to save AI costs.",
+      "AnswerOS scans buyer-intent questions across up to 6 AI search providers (Google Gemini, Groq, NVIDIA NIM, OpenAI, Anthropic Claude, and Perplexity). Each check evaluates whether your brand is mentioned, at what position, with what sentiment, and what competitors/citations appear. Results are cached in Redis with a 24-hour TTL to save AI costs.",
   },
   {
     question: "How long does a scan take?",
@@ -22,7 +22,7 @@ const FAQS = [
   {
     question: "What's included in the free tier?",
     answer:
-      "The free tier includes full domain onboarding, prompt workspace access, and AI search visibility scans across all free AI models (Gemini, Groq LPU, NVIDIA NIM, and OpenRouter). Premium models (OpenAI ChatGPT, Anthropic Claude, Perplexity) unlock when you subscribe.",
+      "The free tier includes full domain onboarding, prompt workspace access, and AI search visibility scans across all free AI models (Gemini, Groq LPU, and NVIDIA NIM). Premium models (OpenAI ChatGPT, Anthropic Claude, Perplexity) unlock when you subscribe.",
   },
   {
     question: "Do I need a credit card to try it?",

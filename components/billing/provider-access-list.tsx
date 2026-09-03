@@ -104,7 +104,7 @@ export function ProviderAccessList({ entitled }: ProviderAccessListProps) {
           </h4>
           <div className="grid grid-cols-1 gap-2.5">
             {providers
-              .filter((p) => ["groq", "nvidia", "openrouter"].includes(p.name))
+              .filter((p) => ["groq", "nvidia"].includes(p.name))
               .map((p) => (
                 <div
                   key={p.name}

@@ -10,18 +10,12 @@ import type { AIProviderName } from "./types";
 
 describe("lib/providers/tiers", () => {
   it("exports correct provider lists for free-tier providers", () => {
-    expect(FREE_PROVIDERS).toEqual([
-      "gemini",
-      "groq",
-      "nvidia",
-      "openrouter",
-    ]);
+    expect(FREE_PROVIDERS).toEqual(["gemini", "groq", "nvidia"]);
     expect(PREMIUM_PROVIDERS).toEqual(["openai", "anthropic", "perplexity"]);
     expect(ALL_PROVIDERS).toEqual([
       "gemini",
       "groq",
       "nvidia",
-      "openrouter",
       "openai",
       "anthropic",
       "perplexity",
@@ -35,7 +29,6 @@ describe("lib/providers/tiers", () => {
         "gemini",
         "groq",
         "nvidia",
-        "openrouter",
         "anthropic",
         "perplexity",
       ];
@@ -43,12 +36,7 @@ describe("lib/providers/tiers", () => {
         entitled: false,
         configured: allConfigured,
       });
-      expect(allowed).toEqual([
-        "gemini",
-        "groq",
-        "nvidia",
-        "openrouter",
-      ]);
+      expect(allowed).toEqual(["gemini", "groq", "nvidia"]);
     });
 
     it("returns only configured free providers when unpaid", () => {
@@ -65,7 +53,6 @@ describe("lib/providers/tiers", () => {
         "gemini",
         "groq",
         "nvidia",
-        "openrouter",
         "anthropic",
         "perplexity",
       ];
@@ -77,7 +64,6 @@ describe("lib/providers/tiers", () => {
         "gemini",
         "groq",
         "nvidia",
-        "openrouter",
         "openai",
         "anthropic",
         "perplexity",
@@ -91,7 +77,6 @@ describe("lib/providers/tiers", () => {
       "gemini",
       "groq",
       "nvidia",
-      "openrouter",
       "anthropic",
       "perplexity",
     ];
@@ -115,7 +100,6 @@ describe("lib/providers/tiers", () => {
         "gemini",
         "groq",
         "nvidia",
-        "openrouter",
         "openai",
         "anthropic",
         "perplexity",

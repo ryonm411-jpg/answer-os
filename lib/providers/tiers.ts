@@ -4,7 +4,6 @@ export const FREE_PROVIDERS: AIProviderName[] = [
   "gemini",
   "groq",
   "nvidia",
-  "openrouter",
 ];
 
 export const PREMIUM_PROVIDERS: AIProviderName[] = [

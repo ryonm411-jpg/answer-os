@@ -47,7 +47,7 @@ export function PlanCards({
             <CardTitle className="text-lg font-bold">Free Tier</CardTitle>
           </div>
           <CardDescription className="text-xs">
-            Free forever version using Google Gemini, Groq, NVIDIA NIM, & OpenRouter
+            Free forever version using Google Gemini, Groq & NVIDIA NIM
           </CardDescription>
           <div className="pt-2">
             <span className="text-2xl font-bold text-foreground">$0</span>
@@ -68,10 +68,7 @@ export function PlanCards({
               <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
               <span>NVIDIA NIM Catalog (NVIDIA_NIM_API_KEY)</span>
             </li>
-            <li className="flex items-center gap-2">
-              <Check className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-              <span>OpenRouter Free Pool (OPEN_ROUTER_API_KEY)</span>
-            </li>
+
           </ul>
         </CardContent>
         <CardFooter className="pt-4 border-t border-border/40">

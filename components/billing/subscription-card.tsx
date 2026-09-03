@@ -56,7 +56,7 @@ export function SubscriptionCard({
               <CardDescription className="text-xs text-muted-foreground mt-0.5">
                 {isEntitled
                   ? "Full AI Visibility & Multi-Provider Intelligence Access Unlocked"
-                  : "Free Tier Active — Gemini, Groq, NVIDIA NIM, & OpenRouter Scans Enabled"}
+                  : "Free Tier Active — Gemini, Groq & NVIDIA NIM Scans Enabled"}
               </CardDescription>
             </div>
           </div>

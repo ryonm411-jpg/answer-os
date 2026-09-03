@@ -13,9 +13,9 @@ import { Badge } from "@/components/ui/badge";
 const FEATURES = [
   {
     icon: Zap,
-    title: "7 Active AI Providers",
+    title: "6 Active AI Providers",
     description:
-      "Gemini, Groq, NVIDIA NIM, and OpenRouter on the free tier; OpenAI, Claude, and Perplexity unlock when subscribed. Enable models on demand in the All Models tab.",
+      "Gemini, Groq LPU, and NVIDIA NIM on the free tier; OpenAI, Claude, and Perplexity unlock when subscribed. Enable models on demand in the All Models tab.",
   },
   {
     icon: Target,

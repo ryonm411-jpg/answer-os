@@ -31,7 +31,6 @@ export const CANONICAL_PROVIDERS: AIProviderName[] = [
 export const AUXILIARY_PROVIDERS: AIProviderName[] = [
   "groq",
   "nvidia",
-  "openrouter",
 ];
 
 export const PROVIDER_PROFILES: Record<AIProviderName, ProviderProfile> = {

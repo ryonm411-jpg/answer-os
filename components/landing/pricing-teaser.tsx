@@ -9,9 +9,9 @@ import { EVENTS } from "@/lib/analytics/events";
 import { cn } from "@/lib/utils";
 
 const INCLUDED_FEATURES = [
-  "Free tier included (Gemini, Groq, NVIDIA NIM, OpenRouter)",
+  "Free tier included (Gemini, Groq, NVIDIA NIM)",
   "Full prompt review & AI suggestion generator workspace",
-  "Async scanning across 7 AI search engines",
+  "Async scanning across 6 AI search engines",
   "Branded vs Organic Visibility Score calculations",
   "Competitor leaderboard & top cited source analytics",
   "Prioritized evidence-based recommendation engine",

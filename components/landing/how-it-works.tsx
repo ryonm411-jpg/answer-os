@@ -37,7 +37,7 @@ const STEPS = [
     stepNumber: "04",
     title: "Run your first scan",
     description:
-      "One click queues an async background scan across your enabled AI engines (Gemini, Groq, NVIDIA, OpenRouter, OpenAI, Claude, Perplexity).",
+      "One click queues an async background scan across your enabled AI engines (Gemini, Groq, NVIDIA NIM, OpenAI, Claude, Perplexity).",
     icon: Play,
   },
   {

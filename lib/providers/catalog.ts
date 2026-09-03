@@ -36,14 +36,6 @@ export const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
     restrictionNote: "Max 2 concurrent checks & strict 45s execution limit",
   },
   {
-    name: "openrouter",
-    label: "OpenRouter Free Pool",
-    description: "Auto-routed free model pool. Best for broad open-source LLM testing.",
-    speedBadge: "Variable Speed",
-    promptLengthNote: "Short Prompts Recommended",
-    restrictionNote: "Auto-routed open-source pool (non-canonical score)",
-  },
-  {
     name: "openai",
     label: "OpenAI ChatGPT",
     description: "GPT-4o benchmark model. Essential for measuring visibility on ChatGPT.",
