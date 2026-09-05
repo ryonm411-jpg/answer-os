@@ -136,6 +136,7 @@ Update this file after every meaningful implementation change.
     3. Added `LANDING_VIEWED` and `LANDING_CTA_CLICKED` analytics event tracking via client-safe PostHog capture.
     4. Exported SEO `metadata` on `app/page.tsx` with Open Graph tags.
     5. Verified 136 unit tests passing (`npm test`), linting clean (`npm run lint`), TypeScript clean (`npx tsc --noEmit`), and production build clean (`npm run build`).
+    6. Removed Eyebrow Badge (`AI Search Visibility for B2B SaaS`) from top of landing page (`components/landing/landing-hero.tsx`).
 
 ## In Progress
 

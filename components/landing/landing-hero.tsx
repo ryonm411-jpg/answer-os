@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { trackClientEvent } from "@/lib/analytics/posthog-client";
 import { EVENTS } from "@/lib/analytics/events";
 import { cn } from "@/lib/utils";
@@ -19,16 +18,6 @@ export function LandingHero() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-primary/10 blur-[120px] rounded-full pointer-events-none -z-10" />
 
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center space-y-8">
-        {/* Eyebrow Badge */}
-        <div className="inline-flex items-center gap-2">
-          <Badge
-            variant="outline"
-            className="px-3.5 py-1 text-xs font-medium border-primary/30 bg-primary/10 text-primary rounded-full gap-1.5"
-          >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>AI Search Visibility for B2B SaaS</span>
-          </Badge>
-        </div>
 
         {/* Primary Headline */}
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-foreground leading-[1.15]">
