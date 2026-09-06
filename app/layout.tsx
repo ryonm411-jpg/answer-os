@@ -5,6 +5,7 @@ import { dark } from "@clerk/themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PostHogIdentify } from "@/lib/analytics/posthog-identify";
 import { ErrorBoundary } from "@sentry/nextjs";
+import { CookieBanner } from "@/components/legal/cookie-banner";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -49,7 +50,10 @@ export default function RootLayout({
           className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
         >
           <body className="min-h-full flex flex-col bg-background text-foreground">
-            <TooltipProvider>{children}</TooltipProvider>
+            <TooltipProvider>
+              {children}
+              <CookieBanner />
+            </TooltipProvider>
           </body>
         </html>
       </ErrorBoundary>

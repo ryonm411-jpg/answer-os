@@ -51,9 +51,20 @@ export function LandingFooter() {
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-6 border-t border-border/40 text-[11px]">
           <p>© {new Date().getFullYear()} AnswerOS Inc. All rights reserved.</p>
-          <p className="text-muted-foreground/70">
-            Proprietary closed-source SaaS · Built for B2B AI Search Optimization
-          </p>
+          <div className="flex flex-wrap items-center gap-4 text-muted-foreground">
+            <Link href="/privacy" className="hover:text-foreground transition-colors">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="hover:text-foreground transition-colors">
+              Terms of Service
+            </Link>
+            <Link href="/cookies" className="hover:text-foreground transition-colors">
+              Cookie Policy
+            </Link>
+            <Link href="/subprocessors" className="hover:text-foreground transition-colors">
+              Subprocessors
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

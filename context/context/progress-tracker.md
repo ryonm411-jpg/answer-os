@@ -137,6 +137,20 @@ Update this file after every meaningful implementation change.
     4. Exported SEO `metadata` on `app/page.tsx` with Open Graph tags.
     5. Verified 136 unit tests passing (`npm test`), linting clean (`npm run lint`), TypeScript clean (`npx tsc --noEmit`), and production build clean (`npm run build`).
     6. Removed Eyebrow Badge (`AI Search Visibility for B2B SaaS`) from top of landing page (`components/landing/landing-hero.tsx`).
+- Implemented Legal & Privacy Baseline (PIPEDA & Global Privacy Compliance Prior to Launch):
+    1. Public Privacy Policy (`app/privacy/page.tsx`): Built comprehensive Privacy Policy page tailored to AnswerOS's technical stack (Clerk, Stripe, Neon, Trigger.dev, Upstash, Resend, OpenAI, Anthropic, Google, Perplexity, Groq, NVIDIA, OpenRouter, PostHog, Sentry), covering data types collected, processing purposes, third-party AI transfers, and PIPEDA baseline principles (consent, limiting collection, purpose identification, security safeguards, retention & access).
+    2. Public Terms of Service (`app/terms/page.tsx`): Built Terms of Service page establishing SaaS contract terms, account rules, subscription billing, cancellation ("Cancel anytime; subscription remains active until period end"), refund policies, and an explicit AI Search Disclaimer clarifying that AI visibility scores, recommendations, rankings, and predictions are informational and not guarantees of placement or performance in AI search systems.
+    3. Public Cookie Policy (`app/cookies/page.tsx`): Built Cookie Policy page detailing strictly necessary authentication cookies vs optional PostHog product analytics cookies and user consent controls.
+    4. Public Subprocessors List (`app/subprocessors/page.tsx`): Built Subprocessors directory with structured data table listing all third-party vendors, purposes, processed data types, and hosting locations.
+    5. Interactive Cookie Consent Banner (`components/legal/cookie-banner.tsx`): Built non-intrusive consent banner allowing users to Accept Analytics, Reject Optional, or manage Cookie Settings, persisting choices in `localStorage` (`answeros_cookie_consent`).
+    6. PostHog Consent Integration (`lib/analytics/posthog-client.tsx`): Updated PostHog client provider to check cookie consent status and toggle opt-in (`posthog.opt_in_capturing()`) or opt-out (`posthog.opt_out_capturing()`) dynamically.
+    7. Mounted Cookie Banner in Root Layout (`app/layout.tsx`): Added `<CookieBanner />` inside `RootLayout` for app-wide consent rendering.
+    8. Signup Legal Notice (`app/(auth)/sign-up/[[...sign-up]]/page.tsx`): Added explicit signup consent text beneath Clerk sign-up form linking directly to Terms of Service and Privacy Policy.
+    9. Footer Legal Links (`components/landing/landing-footer.tsx`): Updated landing page footer to include links to Privacy Policy, Terms of Service, Cookie Policy, and Subprocessors.
+    10. Self-Serve Account & Data Deletion API (`app/api/user/delete-account/route.ts`): Created protected `DELETE` endpoint that purges user data from PostgreSQL (cascading to Company, Scans, ScanResults, Prompts, Recommendations, ProviderPreferences, Subscription) and deletes user identity from Clerk Auth.
+    11. User Settings & Data Controls Page (`app/(editor)/settings/page.tsx`): Built settings page allowing users to view legal documents, adjust cookie consent options, and execute PIPEDA self-serve account deletion with AlertDialog confirmation.
+    12. Navigation Sidebar Update (`components/editor/navigation-sidebar.tsx`): Added Settings link with `Settings` icon to the editor sidebar.
+    13. Verified 136 unit tests passing (`npm test`), TypeScript clean (`npx tsc --noEmit`), and production build clean (`npm run build`).
 
 ## In Progress
 

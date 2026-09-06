@@ -9,6 +9,7 @@ import {
   HelpCircle,
   History,
   CreditCard,
+  Settings,
   Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
   { name: "Prompts", icon: HelpCircle, href: "/prompts" },
   { name: "Scan History", icon: History, href: "/scans" },
   { name: "Billing", icon: CreditCard, href: "/billing" },
+  { name: "Settings", icon: Settings, href: "/settings" },
 ];
 
 export function NavigationSidebar({ isOpen, onClose }: NavigationSidebarProps) {
