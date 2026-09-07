@@ -62,7 +62,7 @@ async function askWithRetry(provider: AIProvider, prompt: string): Promise<AIRes
           error.message.toLowerCase().includes("quota"));
 
       const backoff = isRateLimit
-        ? (profile.tier === "free" ? Math.min(2_500 * (attempt + 1), 5_000) : Math.min(15_000 * (attempt + 1), 35_000))
+        ? (profile.tier === "free" ? Math.min(1_000 * (attempt + 1), 3_000) : Math.min(5_000 * (attempt + 1), 15_000))
         : Math.min(SCAN_RETRY_BASE_MS * 2 ** attempt, SCAN_RETRY_MAX_MS);
 
       logger.warn("Provider call retrying", {
@@ -219,6 +219,9 @@ async function scanPrompt(input: {
 
 export const runScan = task({
   id: "scan-company",
+  retry: {
+    maxAttempts: 1,
+  },
   run: async (
     payload: { scanId: string; providers?: AIProviderName[] },
     { ctx }
@@ -250,7 +253,7 @@ export const runScan = task({
 
       const results: ScanResultInput[] = [];
 
-      // Provider-aware bounded concurrency execution
+      // Provider-aware bounded concurrency execution with real-time incremental persistence
       for (const provider of providers) {
         const profile = getProviderProfile(provider.name);
         const concurrency = profile.maxConcurrency;
@@ -266,14 +269,17 @@ export const runScan = task({
           const batch = providerTasks.slice(i, i + concurrency).map((fn) => fn());
           const batchResults = await Promise.all(batch);
           results.push(...batchResults);
+
+          // Persist batch results incrementally as each prompt check finishes
+          await createScanResults(scanId, batchResults);
+
           if (i + concurrency < providerTasks.length) {
-            const delayMs = profile.tier === "free" ? 3500 : 250;
+            const delayMs = profile.tier === "free" ? 500 : 100;
             await sleep(delayMs);
           }
         }
       }
 
-      await createScanResults(scanId, results);
       await saveScanRecommendations(scan.companyId, scanId);
       await prisma.scan.update({
         where: { id: scanId },
@@ -281,14 +287,16 @@ export const runScan = task({
       });
 
       const failed = results.filter((r) => r.error).length;
-      await trackEvent(EVENTS.SCAN_COMPLETED, scan.company.user.clerkId, {
-        scan_id: scanId,
-        company_id: scan.companyId,
-        prompt_count: prompts.length,
-        provider_count: providers.length,
-        result_count: results.length,
-        failed_count: failed,
-      });
+      if (scan.company.user?.clerkId) {
+        await trackEvent(EVENTS.SCAN_COMPLETED, scan.company.user.clerkId, {
+          scan_id: scanId,
+          company_id: scan.companyId,
+          prompt_count: prompts.length,
+          provider_count: providers.length,
+          result_count: results.length,
+          failed_count: failed,
+        });
+      }
       logger.info("Scan completed", {
         scanId,
         companyId: scan.companyId,
@@ -312,11 +320,16 @@ export const runScan = task({
         where: { id: scanId },
         data: { status: "FAILED", completedAt: new Date() },
       });
-      await trackEvent(EVENTS.SCAN_FAILED, scan.company.user.clerkId, {
-        scan_id: scanId,
-      });
+      if (scan?.company?.user?.clerkId) {
+        await trackEvent(EVENTS.SCAN_FAILED, scan.company.user.clerkId, {
+          scan_id: scanId,
+        });
+      }
       logger.error("Scan failed", { scanId, error });
-      throw error; // SDK retry (config default: 3 attempts)
+      return {
+        status: "FAILED",
+        error: error instanceof Error ? error.message : String(error),
+      };
     }
   },
 });

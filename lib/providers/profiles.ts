@@ -49,8 +49,8 @@ export const PROVIDER_PROFILES: Record<AIProviderName, ProviderProfile> = {
     maxConcurrency: 1,
     requestsPerMinute: 20,
     tokensPerMinute: 30000,
-    requestTimeoutMs: 60_000,
-    maxRetries: 3,
+    requestTimeoutMs: 30_000,
+    maxRetries: 2,
   },
   groq: {
     provider: "groq",
@@ -67,8 +67,8 @@ export const PROVIDER_PROFILES: Record<AIProviderName, ProviderProfile> = {
     maxConcurrency: 1,
     requestsPerMinute: 30,
     tokensPerMinute: 8000,
-    requestTimeoutMs: 30_000,
-    maxRetries: 3,
+    requestTimeoutMs: 25_000,
+    maxRetries: 2,
   },
   nvidia: {
     provider: "nvidia",
@@ -85,8 +85,8 @@ export const PROVIDER_PROFILES: Record<AIProviderName, ProviderProfile> = {
     maxConcurrency: 1,
     requestsPerMinute: 30,
     tokensPerMinute: 20000,
-    requestTimeoutMs: 120_000,
-    maxRetries: 3,
+    requestTimeoutMs: 30_000,
+    maxRetries: 2,
   },
   openrouter: {
     provider: "openrouter",
@@ -103,7 +103,7 @@ export const PROVIDER_PROFILES: Record<AIProviderName, ProviderProfile> = {
     maxConcurrency: 2,
     requestsPerMinute: 20,
     tokensPerMinute: 15000,
-    requestTimeoutMs: 60_000,
+    requestTimeoutMs: 30_000,
     maxRetries: 2,
   },
   openai: {

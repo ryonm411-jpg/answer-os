@@ -10,9 +10,7 @@ import {
   Trash2,
   ExternalLink,
   AlertTriangle,
-  CheckCircle2,
   FileText,
-  Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -39,11 +37,9 @@ export default function SettingsPage() {
   React.useEffect(() => {
     try {
       const stored = localStorage.getItem("answeros_cookie_consent");
-      if (stored === "accepted") {
-        setCookieConsent("accepted");
-      } else {
-        setCookieConsent("rejected");
-      }
+      const status = stored === "accepted" ? "accepted" : "rejected";
+      const timer = setTimeout(() => setCookieConsent(status), 0);
+      return () => clearTimeout(timer);
     } catch {
       // Ignore fallback
     }

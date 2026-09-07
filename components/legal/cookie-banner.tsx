@@ -18,7 +18,8 @@ export function CookieBanner() {
     try {
       const stored = localStorage.getItem(COOKIE_CONSENT_KEY);
       if (!stored) {
-        setIsVisible(true);
+        const timer = setTimeout(() => setIsVisible(true), 0);
+        return () => clearTimeout(timer);
       }
     } catch {
       // Fallback for SSR/restricted environments

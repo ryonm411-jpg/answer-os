@@ -86,21 +86,10 @@ export async function POST(req: Request) {
   }
 
   const productDescription =
-    bodyProductDescription?.trim() || company.productDescription?.trim();
-  const category = bodyCategory?.trim() || company.industry?.trim() || "General";
-
-  // Grounding requirement: productDescription is MANDATORY (spec §7, §22.5, Invariant #14)
-  if (!productDescription) {
-    return NextResponse.json(
-      {
-        error: {
-          message:
-            "Business Profile productDescription is required before generating prompts. Please provide a brief description of what your company sells.",
-        },
-      },
-      { status: 422 }
-    );
-  }
+    bodyProductDescription?.trim() ||
+    company.productDescription?.trim() ||
+    `${company.name} products, services, and software solutions`;
+  const category = bodyCategory?.trim() || company.industry?.trim() || "Software & Technology";
 
   const competitors = await prisma.competitor.findMany({
     where: { companyId: company.id },

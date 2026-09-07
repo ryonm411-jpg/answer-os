@@ -124,14 +124,14 @@ export async function POST() {
     );
   }
 
-  // Stale-PENDING recovery (12, Decision #11): a trigger that was accepted but
-  // never dequeued must not block future scans forever.
-  const STALE_PENDING_MS = 10 * 60 * 1000;
+  // Stale scan recovery (12, Decision #11): a trigger that was accepted but
+  // never completed must not block future scans forever (20 min threshold).
+  const STALE_SCAN_MS = 20 * 60 * 1000;
   await prisma.scan.updateMany({
     where: {
       companyId: company.id,
-      status: "PENDING",
-      createdAt: { lt: new Date(Date.now() - STALE_PENDING_MS) },
+      status: { in: ["PENDING", "RUNNING"] },
+      createdAt: { lt: new Date(Date.now() - STALE_SCAN_MS) },
     },
     data: { status: "FAILED", completedAt: new Date() },
   });
