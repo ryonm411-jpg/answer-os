@@ -38,7 +38,7 @@ Sentry.init({
 async function askWithRetry(provider: AIProvider, prompt: string): Promise<AIResponse> {
   const profile = getProviderProfile(provider.name);
   let lastError: unknown;
-  const maxAttempts = profile.tier === "free" ? Math.min(profile.maxRetries, 2) : profile.maxRetries;
+  const maxAttempts = profile.tier === "free" ? 1 : profile.maxRetries;
   // Tailor maxTokens per provider: Groq free tier enforces strict TPM limits (8,000 TPM)
   const maxTokens = provider.name === "groq" ? 1500 : SCAN_MAX_TOKENS;
 
@@ -61,8 +61,13 @@ async function askWithRetry(provider: AIProvider, prompt: string): Promise<AIRes
           error.message.toLowerCase().includes("rate limit") ||
           error.message.toLowerCase().includes("quota"));
 
+      if (isRateLimit && profile.tier === "free") {
+        // Free tier rate limits fail fast without multi-attempt backoff loops
+        throw error;
+      }
+
       const backoff = isRateLimit
-        ? (profile.tier === "free" ? Math.min(1_000 * (attempt + 1), 3_000) : Math.min(5_000 * (attempt + 1), 15_000))
+        ? Math.min(2_000 * (attempt + 1), 5_000)
         : Math.min(SCAN_RETRY_BASE_MS * 2 ** attempt, SCAN_RETRY_MAX_MS);
 
       logger.warn("Provider call retrying", {
@@ -253,28 +258,74 @@ export const runScan = task({
 
       const results: ScanResultInput[] = [];
 
-      // Provider-aware bounded concurrency execution with real-time incremental persistence
+      // Provider-aware bounded concurrency execution with real-time incremental persistence & circuit breakers
       for (const provider of providers) {
         const profile = getProviderProfile(provider.name);
         const concurrency = profile.maxConcurrency;
-        const providerTasks = prompts.map((prompt) => () =>
-          scanPrompt({
-            provider,
-            prompt: { id: prompt.id, text: prompt.text, promptType: prompt.promptType },
-            company: scan.company,
-          })
-        );
+        let consecutiveRateLimits = 0;
+        let circuitBrokenReason: string | null = null;
 
-        for (let i = 0; i < providerTasks.length; i += concurrency) {
-          const batch = providerTasks.slice(i, i + concurrency).map((fn) => fn());
-          const batchResults = await Promise.all(batch);
+        for (let i = 0; i < prompts.length; i += concurrency) {
+          const batchPrompts = prompts.slice(i, i + concurrency);
+
+          let batchResults: ScanResultInput[];
+          if (circuitBrokenReason) {
+            const prismaProvider = TO_PRISMA_PROVIDER[provider.name] as import("@/generated/prisma").AIProvider;
+            batchResults = batchPrompts.map((p) => ({
+              promptId: p.id,
+              provider: prismaProvider,
+              model: profile.model,
+              mentioned: false,
+              position: null,
+              sentiment: null,
+              reasoning: null,
+              rawResponse: null,
+              competitorsMentioned: null,
+              error: circuitBrokenReason!,
+              citations: [],
+            }));
+          } else {
+            batchResults = await Promise.all(
+              batchPrompts.map((prompt) =>
+                scanPrompt({
+                  provider,
+                  prompt: { id: prompt.id, text: prompt.text, promptType: prompt.promptType },
+                  company: scan.company,
+                })
+              )
+            );
+
+            // Circuit breaker check: track consecutive rate limit or quota failures
+            const rateLimitErrors = batchResults.filter(
+              (r) =>
+                r.error &&
+                (r.error.includes("429") ||
+                  r.error.toLowerCase().includes("rate limit") ||
+                  r.error.toLowerCase().includes("quota") ||
+                  r.error.toLowerCase().includes("budget"))
+            );
+
+            if (rateLimitErrors.length > 0) {
+              consecutiveRateLimits += rateLimitErrors.length;
+              if (consecutiveRateLimits >= 3 && profile.tier === "free") {
+                circuitBrokenReason = `Provider ${provider.name} rate limit exceeded (circuit broken)`;
+                logger.warn("Provider rate limit circuit broken, short-circuiting remaining prompts", {
+                  provider: provider.name,
+                  consecutiveRateLimits,
+                });
+              }
+            } else {
+              consecutiveRateLimits = 0;
+            }
+          }
+
           results.push(...batchResults);
 
           // Persist batch results incrementally as each prompt check finishes
           await createScanResults(scanId, batchResults);
 
-          if (i + concurrency < providerTasks.length) {
-            const delayMs = profile.tier === "free" ? 500 : 100;
+          if (i + concurrency < prompts.length && !circuitBrokenReason) {
+            const delayMs = profile.tier === "free" ? 300 : 100;
             await sleep(delayMs);
           }
         }
