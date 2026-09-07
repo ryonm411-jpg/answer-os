@@ -2,7 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { getCompanyByClerkId } from "@/lib/db/companies";
 import { getPromptsForCompany, addUserCustomPrompt } from "@/lib/db/prompts";
-import { getPromptCompetitiveGap } from "@/lib/db/competitive-gap";
+import { getBatchCompetitiveGaps } from "@/lib/db/competitive-gap";
 import { calculateOpportunityScore } from "@/lib/scoring/opportunity";
 import { getLatestCompletedScan } from "@/lib/db/scoring";
 import { isValidIntent } from "@/lib/prompts/intent";
@@ -36,45 +36,41 @@ export async function GET() {
 
   const rawPrompts = await getPromptsForCompany(company.id);
   const latestScan = await getLatestCompletedScan(company.id);
+  const gapMap = latestScan ? await getBatchCompetitiveGaps(latestScan.id) : new Map();
 
-  const enrichedPrompts = await Promise.all(
-    rawPrompts.map(async (prompt) => {
-      let gap: number | null = null;
-      if (latestScan) {
-        const gapResult = await getPromptCompetitiveGap(prompt.id, latestScan.id);
-        gap = gapResult.competitiveGap;
-      }
+  const enrichedPrompts = rawPrompts.map((prompt) => {
+    const gapResult = gapMap.get(prompt.id);
+    const gap = gapResult ? gapResult.competitiveGap : null;
 
-      // Read-time demand fallback: 50 for legacy/curated prompts with null demandScore
-      const demandScore = prompt.demandScore ?? 50;
-      // Read-time businessRelevance fallback: 80
-      const businessRelevance = prompt.businessRelevance ?? 80;
+    // Read-time demand fallback: 50 for legacy/curated prompts with null demandScore
+    const demandScore = prompt.demandScore ?? 50;
+    // Read-time businessRelevance fallback: 80
+    const businessRelevance = prompt.businessRelevance ?? 80;
 
-      const oppResult = calculateOpportunityScore({
-        demandScore,
-        competitiveGap: gap,
-        businessRelevance,
-      });
+    const oppResult = calculateOpportunityScore({
+      demandScore,
+      competitiveGap: gap,
+      businessRelevance,
+    });
 
-      return {
-        id: prompt.id,
-        text: prompt.text,
-        category: prompt.category,
-        intent: prompt.intent,
-        promptType: prompt.promptType,
-        source: prompt.source,
-        searchVolume: prompt.searchVolume,
-        demandScore,
-        businessRelevance,
-        competitiveGap: oppResult.competitiveGap,
-        opportunityScore: oppResult.score,
-        isEstimated: oppResult.isEstimated,
-        editable: prompt.source !== "CURATED" && prompt.companyId === company.id,
-        createdAt: prompt.createdAt.toISOString(),
-        updatedAt: prompt.updatedAt.toISOString(),
-      };
-    })
-  );
+    return {
+      id: prompt.id,
+      text: prompt.text,
+      category: prompt.category,
+      intent: prompt.intent,
+      promptType: prompt.promptType,
+      source: prompt.source,
+      searchVolume: prompt.searchVolume,
+      demandScore,
+      businessRelevance,
+      competitiveGap: oppResult.competitiveGap,
+      opportunityScore: oppResult.score,
+      isEstimated: oppResult.isEstimated,
+      editable: prompt.source !== "CURATED" && prompt.companyId === company.id,
+      createdAt: prompt.createdAt.toISOString(),
+      updatedAt: prompt.updatedAt.toISOString(),
+    };
+  });
 
   return NextResponse.json({ data: { prompts: enrichedPrompts } });
 }

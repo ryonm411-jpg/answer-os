@@ -1,5 +1,5 @@
 import { prisma } from "./prisma";
-import { getCompanyScore } from "./scoring";
+import { getCompanyScoreForScan } from "./scoring";
 import { calculateVisibilityScore, type ScoredScan, type ScoreResultRow } from "@/lib/scoring/calculator";
 
 export interface PromptPerformanceItem {
@@ -365,18 +365,6 @@ export async function getDashboardData(companyId: string): Promise<DashboardData
   if (!company) return null;
 
   const latestScan = await getLatestScanForCompany(companyId);
-  const score = await getCompanyScore(companyId, "ALL");
-  const brandedScore = await getCompanyScore(companyId, "BRANDED");
-  const unbrandedScore = await getCompanyScore(companyId, "UNBRANDED");
-
-  const brandedPromptCount = await prisma.prompt.count({
-    where: { archivedAt: null, promptType: "BRANDED", OR: [{ companyId }, { companyId: null }] },
-  });
-  const unbrandedPromptCount = await prisma.prompt.count({
-    where: { archivedAt: null, promptType: "UNBRANDED", OR: [{ companyId }, { companyId: null }] },
-  });
-
-  const trend = await getCompanyScoreHistory(companyId);
 
   // Latest completed scan ID for prompt performance and competitor mentions
   const latestCompletedScan = await prisma.scan.findFirst({
@@ -386,6 +374,23 @@ export async function getDashboardData(companyId: string): Promise<DashboardData
   });
 
   const latestCompletedScanId = latestCompletedScan ? latestCompletedScan.id : null;
+
+  const [score, brandedScore, unbrandedScore] = latestCompletedScan
+    ? await Promise.all([
+        getCompanyScoreForScan(latestCompletedScan, "ALL"),
+        getCompanyScoreForScan(latestCompletedScan, "BRANDED"),
+        getCompanyScoreForScan(latestCompletedScan, "UNBRANDED"),
+      ])
+    : [null, null, null];
+
+  const brandedPromptCount = await prisma.prompt.count({
+    where: { archivedAt: null, promptType: "BRANDED", OR: [{ companyId }, { companyId: null }] },
+  });
+  const unbrandedPromptCount = await prisma.prompt.count({
+    where: { archivedAt: null, promptType: "UNBRANDED", OR: [{ companyId }, { companyId: null }] },
+  });
+
+  const trend = await getCompanyScoreHistory(companyId);
 
   const multiBrandTrend = await getMultiBrandScoreHistory(companyId);
   const competitorLeaderboard = await getCompetitorLeaderboard(latestCompletedScanId);

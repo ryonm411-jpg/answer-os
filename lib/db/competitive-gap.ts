@@ -35,3 +35,41 @@ export async function getPromptCompetitiveGap(
 
   return calculatePromptCompetitiveGapFromRows(rows);
 }
+
+/**
+ * Calculates the competitive gap for all prompts within a specific scan in a single query (prevents N+1).
+ *
+ * @param scanId - The completed scan to read results from
+ * @returns Map of promptId -> PromptCompetitiveGapResult
+ */
+export async function getBatchCompetitiveGaps(
+  scanId: string
+): Promise<Map<string, PromptCompetitiveGapResult>> {
+  const rows = await prisma.scanResult.findMany({
+    where: { scanId },
+    select: {
+      promptId: true,
+      mentioned: true,
+      competitorsMentioned: true,
+      error: true,
+    },
+  });
+
+  const promptRowsMap = new Map<string, Array<{ mentioned: boolean; competitorsMentioned: unknown; error: string | null }>>();
+  for (const r of rows) {
+    let list = promptRowsMap.get(r.promptId);
+    if (!list) {
+      list = [];
+      promptRowsMap.set(r.promptId, list);
+    }
+    list.push(r);
+  }
+
+  const resultMap = new Map<string, PromptCompetitiveGapResult>();
+  for (const [promptId, promptRows] of promptRowsMap.entries()) {
+    resultMap.set(promptId, calculatePromptCompetitiveGapFromRows(promptRows));
+  }
+
+  return resultMap;
+}
+

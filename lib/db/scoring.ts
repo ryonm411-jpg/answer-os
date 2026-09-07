@@ -15,18 +15,12 @@ export async function getLatestCompletedScan(companyId: string) {
 }
 
 /**
- * Score the company's latest COMPLETED scan. Server-only (invariant #4) —
- * never called from a client component. Returns null when the company has no
- * completed scan; ScoredScan.score is null when the scan has no valid rows.
- * Optional promptType parameter filters scores by BRANDED or UNBRANDED (Organic).
+ * Score a specific completed scan instance. Server-only (invariant #4).
  */
-export async function getCompanyScore(
-  companyId: string,
+export async function getCompanyScoreForScan(
+  scan: { id: string },
   promptType?: PromptType | "ALL"
 ): Promise<ScoredScan | null> {
-  const scan = await getLatestCompletedScan(companyId);
-  if (!scan) return null;
-
   const results = await prisma.scanResult.findMany({
     where: { scanId: scan.id },
     orderBy: [{ provider: "asc" }, { promptId: "asc" }],
@@ -54,3 +48,19 @@ export async function getCompanyScore(
 
   return calculateVisibilityScore(scoreRows, promptType);
 }
+
+/**
+ * Score the company's latest COMPLETED scan. Server-only (invariant #4) —
+ * never called from a client component. Returns null when the company has no
+ * completed scan; ScoredScan.score is null when the scan has no valid rows.
+ * Optional promptType parameter filters scores by BRANDED or UNBRANDED (Organic).
+ */
+export async function getCompanyScore(
+  companyId: string,
+  promptType?: PromptType | "ALL"
+): Promise<ScoredScan | null> {
+  const scan = await getLatestCompletedScan(companyId);
+  if (!scan) return null;
+  return getCompanyScoreForScan(scan, promptType);
+}
+
