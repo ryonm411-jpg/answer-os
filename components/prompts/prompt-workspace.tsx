@@ -77,7 +77,7 @@ export function PromptWorkspace({
     setIndustry(profile.industry);
   };
 
-  const handleGenerateSuggestions = async () => {
+  const handleGenerateSuggestions = async (count: number = 6) => {
     setError("");
     setInfoMessage("");
     setIsGenerating(true);
@@ -85,7 +85,7 @@ export function PromptWorkspace({
       const res = await fetch("/api/prompts/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productDescription, category: industry }),
+        body: JSON.stringify({ productDescription, category: industry, count }),
       });
       const json = await res.json();
       if (!res.ok) {

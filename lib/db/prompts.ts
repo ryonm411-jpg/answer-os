@@ -23,44 +23,6 @@ export interface PromptSuggestionInput {
  * Excludes archived prompts.
  */
 export async function getPromptsForCompany(companyId: string) {
-  const prompts = await prisma.prompt.findMany({
-    where: {
-      archivedAt: null,
-      OR: [{ companyId }, { companyId: null }],
-    },
-    orderBy: [{ category: "asc" }, { text: "asc" }],
-  });
-
-  if (prompts.length > 0) return prompts;
-
-  // Fallback: If 0 active prompts exist in DB, auto-create a starter prompt set for the company
-  const company = await prisma.company.findUnique({
-    where: { id: companyId },
-    select: { name: true, domain: true },
-  });
-  if (!company) return [];
-
-  const starterPrompts = [
-    `What are the best software alternatives to ${company.name}?`,
-    `How does ${company.name} compare to top industry competitors?`,
-    `What are the core features and pricing of ${company.name}?`,
-    `Is ${company.name} recommended for enterprise use?`,
-    `What software solutions does ${company.name} provide?`,
-  ];
-
-  await prisma.prompt.createMany({
-    data: starterPrompts.map((text) => ({
-      companyId,
-      source: "AI_SUGGESTED" as const,
-      intent: "PRODUCT" as const,
-      promptType: "BRANDED" as const,
-      text,
-      category: "General",
-      demandScore: 50,
-      businessRelevance: 70,
-    })),
-  });
-
   return prisma.prompt.findMany({
     where: {
       archivedAt: null,

@@ -76,7 +76,7 @@ export function parseSuggestions(content: string): PromptSuggestion[] {
 export function filterSuggestions(
   raw: Partial<PromptSuggestion>[],
   curatedTexts: Set<string>,
-  max: number = 20,
+  max: number = 6,
   fallbackCategory?: string,
   companyName?: string,
   companyDomain?: string
@@ -159,6 +159,8 @@ export async function generatePromptSuggestions(
     throw new PromptGenerationError("Business Profile productDescription is required for prompt generation");
   }
 
+  const targetCount = input.count ?? 6;
+
   const candidateProviders: AIProvider[] = opts?.provider
     ? [opts.provider]
     : opts?.providers && opts.providers.length > 0
@@ -177,7 +179,7 @@ export async function generatePromptSuggestions(
   const categoriesList = PROMPT_CATEGORIES.join(", ");
   const intentsList = PROMPT_INTENTS.join(", ");
 
-  const prompt = `You are an AI search visibility analyst. Generate realistic, high-intent buyer questions that prospects ask AI assistants (ChatGPT, Claude, Gemini, Perplexity) when discovering or comparing solutions in this company's exact industry.
+  const prompt = `You are an AI search visibility analyst. Generate ${targetCount} realistic, high-intent buyer questions that prospects ask AI assistants (ChatGPT, Claude, Gemini, Perplexity) when discovering or comparing solutions in this company's exact industry.
 
 CRITICAL INSTRUCTIONS:
 1. All generated questions MUST be strictly relevant to the company's Business Profile described below.
@@ -194,7 +196,7 @@ Company Context:
 - Key Competitors: ${competitorList}
 
 Instructions:
-1. Generate natural buyer questions relevant to this specific product offering across ALL applicable buyer intents.
+1. Generate ${targetCount} natural buyer questions relevant to this specific product offering across ALL applicable buyer intents.
 2. Each question MUST be assigned one of these EXACT intent values: ${intentsList}.
 3. Each question MUST be assigned one of these EXACT categories: ${categoriesList}.
 4. Provide an estimated "demandScore" (0-100, representing how commonly buyers search/ask this type of query).
@@ -262,7 +264,7 @@ Example JSON output format:
   return filterSuggestions(
     rawParsed,
     curatedSet,
-    input.count ?? 20,
+    targetCount,
     input.businessProfile.category,
     input.companyName,
     input.domain

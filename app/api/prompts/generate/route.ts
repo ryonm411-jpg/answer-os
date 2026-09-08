@@ -73,6 +73,7 @@ export async function POST(req: Request) {
   // Parse optional body for temporary profile override or fallback to stored profile
   let bodyProductDescription: string | undefined;
   let bodyCategory: string | undefined;
+  let count = 6;
   try {
     const body = await req.json();
     if (typeof body?.productDescription === "string") {
@@ -80,6 +81,9 @@ export async function POST(req: Request) {
     }
     if (typeof body?.category === "string") {
       bodyCategory = body.category;
+    }
+    if (typeof body?.count === "number" && body.count > 0) {
+      count = Math.min(Math.max(1, body.count), 50);
     }
   } catch {
     // Body is optional if stored profile exists
@@ -107,6 +111,7 @@ export async function POST(req: Request) {
           category,
         },
         competitors,
+        count,
       },
       providers.length > 0 ? { providers } : undefined
     );

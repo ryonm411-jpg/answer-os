@@ -8,11 +8,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 export interface PromptGenerationActionsProps {
   productDescription: string;
   industry: string;
   onSaveProfile: (profile: { productDescription: string; industry: string }) => Promise<void>;
-  onGenerateSuggestions: () => Promise<void>;
+  onGenerateSuggestions: (count: number) => Promise<void>;
   isGenerating: boolean;
   isLocked?: boolean;
 }
@@ -27,6 +35,7 @@ export function PromptGenerationActions({
 }: PromptGenerationActionsProps) {
   const [productDescription, setProductDescription] = React.useState(initialProductDesc);
   const [industry, setIndustry] = React.useState(initialIndustry);
+  const [promptCount, setPromptCount] = React.useState<number>(6);
   const [isEditingProfile, setIsEditingProfile] = React.useState(!initialProductDesc);
   const [isSaving, setIsSaving] = React.useState(false);
   const [error, setError] = React.useState("");
@@ -70,7 +79,7 @@ export function PromptGenerationActions({
       setError("Please save a Business Profile first so AI can generate relevant prompts.");
       return;
     }
-    await onGenerateSuggestions();
+    await onGenerateSuggestions(promptCount);
   };
 
   return (
@@ -159,20 +168,40 @@ export function PromptGenerationActions({
         </CardContent>
       </Card>
 
-      {/* Action bar with Generate button */}
-      <div className="flex items-center justify-between">
+      {/* Action bar with Generate button & Count Selector */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
           AI generation uses your Business Profile to discover high-value buyer prompts across all 7 intents.
         </p>
 
-        <Button
-          onClick={handleGenerateClick}
-          disabled={isGenerating || isLocked}
-          className="gap-2 shrink-0"
-        >
-          <Sparkles className="h-4 w-4" />
-          <span>{isGenerating ? "Generating..." : "Generate AI Suggestions"}</span>
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Select
+            value={String(promptCount)}
+            onValueChange={(val) => setPromptCount(Number(val))}
+            disabled={isGenerating || isLocked}
+          >
+            <SelectTrigger className="h-9 w-[130px] text-xs">
+              <SelectValue placeholder="6 Prompts" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="3">3 Prompts</SelectItem>
+              <SelectItem value="6">6 Prompts</SelectItem>
+              <SelectItem value="9">9 Prompts</SelectItem>
+              <SelectItem value="12">12 Prompts</SelectItem>
+              <SelectItem value="15">15 Prompts</SelectItem>
+              <SelectItem value="20">20 Prompts</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button
+            onClick={handleGenerateClick}
+            disabled={isGenerating || isLocked}
+            className="gap-2 shrink-0"
+          >
+            <Sparkles className="h-4 w-4" />
+            <span>{isGenerating ? "Generating..." : "Generate AI Suggestions"}</span>
+          </Button>
+        </div>
       </div>
     </div>
   );

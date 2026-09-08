@@ -57,7 +57,12 @@ Update this file after every meaningful implementation change.
   6. Enforced server-side entitlement checks (`402 Payment Required`) on resource-consuming actions: `POST /api/scans` and `POST /api/prompts/generate`.
   7. Created client API fetch helpers (`lib/api/billing.ts`) and billing presentation UI suite (`components/billing/billing-status-badge.tsx`, `components/billing/subscription-card.tsx`, `components/billing/billing-page.tsx`, and `app/(editor)/billing/page.tsx`).
   8. Added Billing navigation link with `CreditCard` icon to the editor sidebar (`components/editor/navigation-sidebar.tsx`).
-  9. Added co-located Vitest unit tests (`lib/stripe/server.test.ts`) and verified full test suite (93 unit tests passing across 16 test files).
+  9. Removed Hardcoded Starter Prompts & Added Configurable AI Prompt Generation Count (2026-09-07):
+    1. Removed `starterPrompts` fallback auto-creation from `getPromptsForCompany()` in `lib/db/prompts.ts`, ensuring new workspaces start with an empty workspace until AI suggestions or custom prompts are added.
+    2. Updated default AI prompt generation count from 20 to 6 in `lib/prompts/generator.ts` and updated LLM system prompt instructions to request the exact target count.
+    3. Added count parameter parsing in `POST /api/prompts/generate` API route (`app/api/prompts/generate/route.ts`).
+    4. Added a prompt count UI selector (3, 6, 9, 12, 15, 20; default: 6) in `components/prompts/prompt-generation-actions.tsx` and wired count parameter in `components/prompts/prompt-workspace.tsx`.
+    5. Verified all unit tests (`vitest`), type checks (`npx tsc --noEmit`), and builds pass cleanly.
 - Implemented Free Tier — Multi-Provider Free Version (Gemini, Groq, NVIDIA NIM, & OpenRouter), Premium Providers Locked Until Paid (`context/features-specs/17-free-tier.md`):
   1. Extended Prisma `AIProvider` enum with `GROQ`, `NVIDIA`, and `OPENROUTER` (`20260823022050_add_free_llm_providers` migration applied).
   8. Updated Vitest unit test suites (`lib/providers/tiers.test.ts`, `config.test.ts`, & `registry.test.ts` — 96 unit tests passing across 18 test files).
