@@ -503,3 +503,9 @@ Update this file after every meaningful implementation change.
     4. Updated stale scan recovery threshold in `app/api/scans/route.ts` to 20 minutes for both `PENDING` and `RUNNING` scans (`STALE_SCAN_MS = 20 * 60 * 1000`).
     5. Added fallback `productDescription` in `app/api/prompts/generate/route.ts` and starter prompt fallback in `lib/db/prompts.ts` (`getPromptsForCompany`), preventing cold-start 0-prompt scan attempts.
     6. Verified: all 136 unit tests passing (`npm test`), TypeScript check clean (`npx tsc --noEmit`), and production build succeeded (`npm run build`).
+- Implemented Free-Tier Single-Model Constraint (2026-09-09):
+    1. Defined `FREE_TIER_MAX_ENABLED = 1` and `capFreeProviders()` in `lib/providers/tiers.ts`, ensuring non-entitled (free) users can only have at most 1 free provider active at any time.
+    2. Added server-side cap validation in `PUT /api/providers/preferences` (`app/api/providers/preferences/route.ts`), returning `422` if a free user submits more than 1 free model.
+    3. Updated `components/editor/models-tab.tsx` with optimistic radio-button switching for free users (enabling a free model automatically deselects all other free models, while allowing paid users multi-select).
+    4. Updated unit tests in `lib/providers/tiers.test.ts` (7 new test cases covering single-model cap behavior).
+    5. Verified: 144 unit tests passing across 25 test files (`npm test`), TypeScript check clean (`npx tsc --noEmit`), committed `517e3f3` and pushed to `master`.
