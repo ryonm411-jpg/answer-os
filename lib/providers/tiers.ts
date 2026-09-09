@@ -1,5 +1,11 @@
 import type { AIProviderName } from "./types";
 
+/**
+ * Free-tier users may enable at most this many free providers simultaneously.
+ * Premium (paid) users have no such cap.
+ */
+export const FREE_TIER_MAX_ENABLED = 1;
+
 export const FREE_PROVIDERS: AIProviderName[] = [
   "gemini",
   "groq",
@@ -42,5 +48,26 @@ export function resolveEffectiveProviders(input: {
   });
   const enabled = input.enabled;
   if (enabled === null) return tierAllowed;
-  return tierAllowed.filter((name) => enabled.includes(name));
+  const effective = tierAllowed.filter((name) => enabled.includes(name));
+  // Free-tier: cap to at most FREE_TIER_MAX_ENABLED free providers.
+  if (!input.entitled) return effective.slice(0, FREE_TIER_MAX_ENABLED);
+  return effective;
+}
+
+/**
+ * Enforces the free-tier single-provider cap on a candidate enabled list.
+ * Returns the list unchanged for paid users. For free users, keeps only the
+ * first `FREE_TIER_MAX_ENABLED` entries that are free providers.
+ * Premium providers are stripped (tier enforcement is done separately in
+ * `resolveAllowedProviders`).
+ */
+export function capFreeProviders(
+  enabled: AIProviderName[],
+  entitled: boolean
+): AIProviderName[] {
+  if (entitled) return enabled;
+  const freeOnly = enabled.filter((name) =>
+    FREE_PROVIDERS.includes(name)
+  );
+  return freeOnly.slice(0, FREE_TIER_MAX_ENABLED);
 }

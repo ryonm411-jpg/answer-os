@@ -165,6 +165,16 @@ Update this file after every meaningful implementation change.
 
 - None.
 
+## Completed (Recent)
+
+- Free-tier single-model constraint (2026-09-09): Free-tier users may enable at most **one** free AI model at a time (radio-button semantics).
+  1. Added `FREE_TIER_MAX_ENABLED = 1` constant and `capFreeProviders()` helper to `lib/providers/tiers.ts`.
+  2. Updated `resolveEffectiveProviders` to slice the effective set to 1 for non-entitled users.
+  3. Enforced the cap server-side in `PUT /api/providers/preferences` — returns 422 if more than one free model is submitted.
+  4. Updated `ModelsTab` component: enabling a free model now automatically deselects all other free models (optimistic radio switch); last-enabled guard now only applies to paid users.
+  5. Updated and added unit tests in `lib/providers/tiers.test.ts` — 144 tests passing across 25 test files; `npx tsc --noEmit` clean.
+
+
 ## Next Up
 
 1. Implement weekly email reports via Resend

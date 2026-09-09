@@ -9,6 +9,7 @@ import {
 } from "@/lib/api/providers";
 import type { ProviderCatalogView } from "@/lib/api/providers";
 import type { AIProviderName } from "@/lib/providers";
+import { FREE_PROVIDERS } from "@/lib/providers";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -67,23 +68,57 @@ export function ModelsTab() {
     if (!view) return;
     const current = view.providers.find((p) => p.name === name);
     if (!current || current.locked) return;
-    // Last-enabled guard: never allow disabling the final enabled provider.
-    if (current.enabled && enabledCount <= 1) return;
+
+    const isFreeProvider = FREE_PROVIDERS.includes(name);
+    const isFreeUser = !view.entitled;
+
+    // For free users toggling a free provider:
+    // - If it's already enabled and it's the only one → block (last-enabled guard).
+    // - If it's already enabled and there are paid providers also enabled → allow disable.
+    // - If it's disabled → switch to it (radio: disable all other free ones).
+    // For paid users, use the existing multi-select logic with last-enabled guard.
+    if (isFreeUser && isFreeProvider) {
+      if (current.enabled) {
+        // Only block if there's truly nothing else enabled at all.
+        if (enabledCount <= 1) return;
+        // Otherwise allow turning it off (e.g. they have a premium provider on some other toggle).
+      }
+    } else {
+      // Non-free-user or premium provider path: existing last-enabled guard.
+      if (current.enabled && enabledCount <= 1) return;
+    }
 
     const previous = view;
     const previouslyEnabled = previous.providers
       .filter((p) => p.enabled)
       .map((p) => p.name);
-    const nextEnabled = current.enabled
-      ? previouslyEnabled.filter((n) => n !== name)
-      : [...previouslyEnabled, name];
+
+    let nextEnabled: AIProviderName[];
+    if (isFreeUser && isFreeProvider && !current.enabled) {
+      // Radio switch: enable this free provider, deselect all other free providers.
+      const withoutOtherFree = previouslyEnabled.filter(
+        (n) => !FREE_PROVIDERS.includes(n)
+      );
+      nextEnabled = [...withoutOtherFree, name];
+    } else {
+      nextEnabled = current.enabled
+        ? previouslyEnabled.filter((n) => n !== name)
+        : [...previouslyEnabled, name];
+    }
 
     // Optimistic update, revert on failure (spec 18, §11).
     setView({
       ...previous,
-      providers: previous.providers.map((p) =>
-        p.name === name ? { ...p, enabled: !p.enabled } : p
-      ),
+      providers: previous.providers.map((p) => {
+        if (isFreeUser && isFreeProvider && !current.enabled) {
+          // Deselect all other free providers in the optimistic view.
+          if (FREE_PROVIDERS.includes(p.name)) {
+            return { ...p, enabled: p.name === name };
+          }
+          return p;
+        }
+        return p.name === name ? { ...p, enabled: !p.enabled } : p;
+      }),
     });
     setError(null);
 
@@ -182,7 +217,12 @@ export function ModelsTab() {
             ))}
 
           {view?.providers.map((provider) => {
-            const isLastEnabled = provider.enabled && enabledCount === 1;
+            const isFreeUser = !view.entitled;
+            // For free users on free providers: never lock the switch — they
+            // switch between models by clicking another (radio behavior).
+            // For paid users: apply the last-enabled guard as before.
+            const isLastEnabled =
+              !isFreeUser && provider.enabled && enabledCount === 1;
             const switchDisabled = provider.locked || isLastEnabled;
 
             const switchNode = (

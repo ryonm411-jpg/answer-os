@@ -8,6 +8,9 @@ import {
 import { hasActiveSubscription } from "@/lib/db/subscriptions";
 import {
   ALL_PROVIDERS,
+  capFreeProviders,
+  FREE_PROVIDERS,
+  FREE_TIER_MAX_ENABLED,
   getAvailableProviders,
   resolveAllowedProviders,
 } from "@/lib/providers";
@@ -76,6 +79,23 @@ export async function PUT(req: Request) {
       { error: { message: EMPTY_MESSAGE } },
       { status: 422 }
     );
+  }
+
+  // Free-tier: at most FREE_TIER_MAX_ENABLED free provider(s) at a time.
+  const entitled = await hasActiveSubscription(company.id);
+  if (!entitled) {
+    const freeInRequest = enabled.filter((n) => FREE_PROVIDERS.includes(n));
+    const capped = capFreeProviders(enabled, false);
+    if (capped.length < freeInRequest.length) {
+      return NextResponse.json(
+        {
+          error: {
+            message: `Free-tier accounts may enable at most ${FREE_TIER_MAX_ENABLED} AI model at a time. Disable your current free model before enabling another.`,
+          },
+        },
+        { status: 422 }
+      );
+    }
   }
 
   const stored = await upsertProviderPreferences(company.id, enabled);

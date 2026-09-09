@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   ALL_PROVIDERS,
+  capFreeProviders,
   FREE_PROVIDERS,
+  FREE_TIER_MAX_ENABLED,
   PREMIUM_PROVIDERS,
   resolveAllowedProviders,
   resolveEffectiveProviders,
@@ -106,13 +108,14 @@ describe("lib/providers/tiers", () => {
       ]);
     });
 
-    it("narrows the tier-allowed set to the stored selection", () => {
+    it("narrows the tier-allowed set to the stored selection and caps free users to one provider", () => {
       const effective = resolveEffectiveProviders({
         entitled: false,
         configured: allConfigured,
         enabled: ["gemini", "groq"],
       });
-      expect(effective).toEqual(["gemini", "groq"]);
+      // Free-tier cap: only the first stored free provider is kept.
+      expect(effective).toEqual(["gemini"]);
     });
 
     it("excludes premium providers while unpaid even when stored", () => {
@@ -149,6 +152,60 @@ describe("lib/providers/tiers", () => {
         enabled: [],
       });
       expect(effective).toEqual([]);
+    });
+
+    it("caps free-tier users to FREE_TIER_MAX_ENABLED free provider when multiple free ones stored", () => {
+      const effective = resolveEffectiveProviders({
+        entitled: false,
+        configured: allConfigured,
+        enabled: ["gemini", "groq", "nvidia"],
+      });
+      // Only the first FREE_TIER_MAX_ENABLED provider is kept.
+      expect(effective).toHaveLength(FREE_TIER_MAX_ENABLED);
+      expect(effective[0]).toBe("gemini");
+    });
+
+    it("does not cap paid users when multiple free providers are stored", () => {
+      const effective = resolveEffectiveProviders({
+        entitled: true,
+        configured: allConfigured,
+        enabled: ["gemini", "groq", "nvidia"],
+      });
+      expect(effective).toEqual(["gemini", "groq", "nvidia"]);
+    });
+  });
+
+  describe("FREE_TIER_MAX_ENABLED", () => {
+    it("is 1", () => {
+      expect(FREE_TIER_MAX_ENABLED).toBe(1);
+    });
+  });
+
+  describe("capFreeProviders", () => {
+    it("returns the list unchanged for entitled users", () => {
+      const result = capFreeProviders(["gemini", "groq", "nvidia"], true);
+      expect(result).toEqual(["gemini", "groq", "nvidia"]);
+    });
+
+    it("strips all but the first free provider for free-tier users", () => {
+      const result = capFreeProviders(["gemini", "groq", "nvidia"], false);
+      expect(result).toEqual(["gemini"]);
+    });
+
+    it("strips premium providers entirely for free-tier users", () => {
+      const result = capFreeProviders(["openai", "gemini", "groq"], false);
+      // Premium provider is removed; only first free provider kept.
+      expect(result).toEqual(["gemini"]);
+    });
+
+    it("returns empty array when no free providers in input for free-tier user", () => {
+      const result = capFreeProviders(["openai", "anthropic"], false);
+      expect(result).toEqual([]);
+    });
+
+    it("returns a single free provider unchanged for free-tier user", () => {
+      const result = capFreeProviders(["groq"], false);
+      expect(result).toEqual(["groq"]);
     });
   });
 });
