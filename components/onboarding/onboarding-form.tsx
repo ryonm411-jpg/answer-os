@@ -14,6 +14,7 @@ export function OnboardingForm() {
   const router = useRouter();
 
   const [domain, setDomain] = React.useState("");
+  const [productDescription, setProductDescription] = React.useState("");
   const [error, setError] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
 
@@ -45,12 +46,25 @@ export function OnboardingForm() {
     setError("");
     setIsLoading(true);
 
+    const desc = productDescription.trim();
+
     try {
-      await createCompany(normalized);
+      await createCompany(normalized, {
+        productDescription: desc || undefined,
+      });
       // No PII per spec 21: never send domain/name/email as event properties.
       posthog.capture(EVENTS.ONBOARDING_COMPLETED);
-      // Kick off AI prompt generation best-effort (non-blocking)
-      fetch("/api/prompts/generate", { method: "POST" }).catch(() => {});
+
+      // Kick off AI prompt generation with product description context (non-blocking)
+      fetch("/api/prompts/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productDescription: desc || undefined,
+          count: 8,
+        }),
+      }).catch(() => {});
+
       // Success — navigate to the dashboard (now renders the company state).
       router.push("/editor");
     } catch (err) {
@@ -72,7 +86,7 @@ export function OnboardingForm() {
           Set up your workspace
         </h1>
         <p className="text-sm text-muted-foreground">
-          Enter the domain you want to track across AI search engines.
+          Enter your company domain and software focus to generate tailored buyer queries.
         </p>
       </div>
 
@@ -102,12 +116,31 @@ export function OnboardingForm() {
           )}
         </div>
 
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="description">What does your company do?</Label>
+            <span className="text-xs text-muted-foreground">Optional</span>
+          </div>
+          <Input
+            id="description"
+            type="text"
+            placeholder="e.g. Issue tracking and project management for software engineers"
+            value={productDescription}
+            onChange={(e) => setProductDescription(e.target.value)}
+            disabled={isLoading}
+            autoComplete="off"
+          />
+          <p className="text-[12px] text-muted-foreground">
+            Helps AI models generate accurate organic search queries for your market.
+          </p>
+        </div>
+
         <Button
           type="submit"
           className="w-full"
           disabled={isLoading}
         >
-          {isLoading ? "Adding…" : "Continue"}
+          {isLoading ? "Setting up workspace…" : "Continue to Dashboard"}
         </Button>
       </form>
     </div>

@@ -31,10 +31,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 /** Create the user's company. → POST /api/domain */
-export function createCompany(domain: string) {
+export function createCompany(
+  domain: string,
+  options?: { industry?: string; productDescription?: string }
+) {
   return request<void>("/api/domain", {
     method: "POST",
-    body: JSON.stringify({ domain }),
+    body: JSON.stringify({
+      domain,
+      industry: options?.industry,
+      productDescription: options?.productDescription,
+    }),
   });
 }
 

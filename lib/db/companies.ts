@@ -44,12 +44,13 @@ export async function getCompanyByUserId(userId: string) {
 
 /**
  * Create a company for a user.
- * `name` defaults to the normalized domain; `industry` is optional.
+ * `name` defaults to the normalized domain; `industry` and `productDescription` are optional.
  */
 export async function createCompany(
   userId: string,
   domain: string,
-  industry?: string
+  industry?: string,
+  productDescription?: string
 ) {
   const normalized = normalizeDomain(domain);
   return prisma.company.create({
@@ -58,6 +59,7 @@ export async function createCompany(
       name: normalized,
       domain: normalized,
       industry: industry ?? null,
+      productDescription: productDescription ? productDescription.trim() : null,
     },
   });
 }

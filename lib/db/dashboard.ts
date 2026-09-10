@@ -76,6 +76,14 @@ export interface CompetitorLeaderboardRow {
   averagePosition: number; // e.g. 2.7
 }
 
+export interface StarterPromptItem {
+  id: string;
+  text: string;
+  category: string;
+  intent: string;
+  promptType: "BRANDED" | "UNBRANDED";
+}
+
 export interface DashboardData {
   company: {
     id: string;
@@ -89,6 +97,7 @@ export interface DashboardData {
   unbrandedScore: ScoredScan | null;
   brandedPromptCount: number;
   unbrandedPromptCount: number;
+  starterPrompts: StarterPromptItem[];
   trend: DashboardTrendPoint[];
   multiBrandTrend: MultiBrandTrendPoint[];
   competitorLeaderboard: CompetitorLeaderboardRow[];
@@ -390,6 +399,33 @@ export async function getDashboardData(companyId: string): Promise<DashboardData
     where: { archivedAt: null, promptType: "UNBRANDED", OR: [{ companyId }, { companyId: null }] },
   });
 
+  const starterPromptsRaw = await prisma.prompt.findMany({
+    where: {
+      archivedAt: null,
+      OR: [{ companyId }, { companyId: null }],
+    },
+    select: {
+      id: true,
+      text: true,
+      category: true,
+      intent: true,
+      promptType: true,
+    },
+    orderBy: [
+      { companyId: "desc" },
+      { createdAt: "desc" },
+    ],
+    take: 6,
+  });
+
+  const starterPrompts: StarterPromptItem[] = starterPromptsRaw.map((p) => ({
+    id: p.id,
+    text: p.text,
+    category: p.category,
+    intent: p.intent,
+    promptType: p.promptType,
+  }));
+
   const trend = await getCompanyScoreHistory(companyId);
 
   const multiBrandTrend = await getMultiBrandScoreHistory(companyId);
@@ -407,6 +443,7 @@ export async function getDashboardData(companyId: string): Promise<DashboardData
     unbrandedScore,
     brandedPromptCount,
     unbrandedPromptCount,
+    starterPrompts,
     trend,
     multiBrandTrend,
     competitorLeaderboard,

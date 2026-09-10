@@ -77,7 +77,7 @@ export async function POST(req: Request) {
     );
   }
 
-  let body: { domain?: unknown; industry?: unknown };
+  let body: { domain?: unknown; industry?: unknown; productDescription?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -87,7 +87,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const { domain, industry } = body ?? {};
+  const { domain, industry, productDescription } = body ?? {};
 
   const normalizedDomain =
     typeof domain === "string" ? normalizeDomain(domain) : "";
@@ -133,7 +133,8 @@ export async function POST(req: Request) {
     company = await createCompany(
       dbUser.id,
       normalizedDomain,
-      typeof industry === "string" ? industry.trim() || undefined : undefined
+      typeof industry === "string" ? industry.trim() || undefined : undefined,
+      typeof productDescription === "string" ? productDescription.trim() || undefined : undefined
     );
   } catch (error) {
     // Two near-simultaneous POSTs can both pass the pre-checks above and then
