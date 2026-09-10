@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { LandingNavbar } from "@/components/landing/landing-navbar";
 import { LandingHero } from "@/components/landing/landing-hero";
+import { ScanPreviewShowcase } from "@/components/landing/scan-preview-showcase";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { ScoreExplainer } from "@/components/landing/score-explainer";
 import { FeatureGrid } from "@/components/landing/feature-grid";
@@ -15,7 +16,7 @@ import { LandingTracker } from "@/components/landing/landing-tracker";
 export const metadata: Metadata = {
   title: "AnswerOS — Become the answer AI search engines give",
   description:
-    "AnswerOS helps B2B SaaS companies track and optimize how often ChatGPT, Claude, Gemini, and Perplexity recommend their software to prospective buyers.",
+    "AnswerOS helps B2B SaaS companies track and optimize how often ChatGPT, Claude, Gemini, and Groq recommend their software to prospective buyers.",
   keywords: [
     "AI search optimization",
     "AEO",
@@ -46,6 +47,7 @@ export default async function HomePage() {
       <LandingNavbar />
       <main className="flex-1">
         <LandingHero />
+        <ScanPreviewShowcase />
         <HowItWorks />
         <ScoreExplainer />
         <FeatureGrid />

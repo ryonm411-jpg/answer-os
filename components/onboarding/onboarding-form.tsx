@@ -17,6 +17,17 @@ export function OnboardingForm() {
   const [error, setError] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
 
+  React.useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem("prefill_domain");
+      if (stored) {
+        setDomain(stored);
+      }
+    } catch {
+      // Ignore storage access errors
+    }
+  }, []);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 

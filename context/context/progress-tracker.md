@@ -509,3 +509,9 @@ Update this file after every meaningful implementation change.
     3. Updated `components/editor/models-tab.tsx` with optimistic radio-button switching for free users (enabling a free model automatically deselects all other free models, while allowing paid users multi-select).
     4. Updated unit tests in `lib/providers/tiers.test.ts` (7 new test cases covering single-model cap behavior).
     5. Verified: 144 unit tests passing across 25 test files (`npm test`), TypeScript check clean (`npx tsc --noEmit`), committed `517e3f3` and pushed to `master`.
+- Implemented Landing Page Live Domain Checker & Interactive Visual Proof Showcase (2026-09-09):
+    1. Built `LiveDomainChecker` (`components/landing/live-domain-checker.tsx`) enabling anonymous visitors on `/` to type their domain, view animated multi-stage AI check telemetry, and receive an instant teaser visibility score with organic discovery gap analysis before signup.
+    2. Built `ScanPreviewShowcase` (`components/landing/scan-preview-showcase.tsx`) with an interactive 4-tab product tour displaying real AI answer snippets (Groq & Gemini), score factor breakdowns, competitor leaderboard, and evidence-based recommendations.
+    3. Integrated `LiveDomainChecker` into `LandingHero` and `ScanPreviewShowcase` into `app/page.tsx`.
+    4. Enhanced `OnboardingForm` (`components/onboarding/onboarding-form.tsx`) to automatically prefill the user's domain from `sessionStorage` or URL parameters upon signup.
+    5. Verified: 144 unit tests passing across 25 test files (`npm test`), TypeScript check clean (`npx tsc --noEmit`), and production build succeeded (`npm run build`).
