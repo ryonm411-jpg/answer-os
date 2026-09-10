@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Scan, AlertTriangle, RefreshCw, Layers } from "lucide-react";
+import { Plus, AlertTriangle, RefreshCw, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useDialogs } from "@/hooks/use-dialogs";
 
@@ -17,6 +17,7 @@ import { TopSourcesCard } from "./top-sources-card";
 import { SourcesDomainTable } from "./sources-domain-table";
 import { PromptPerformance } from "./prompt-performance";
 import { RecommendationsList } from "./recommendations-list";
+import { PreScanLaunchpad } from "./pre-scan-launchpad";
 import { getDashboardTrend, getDashboardSources } from "@/lib/api/dashboard";
 
 import type { DashboardData, MultiBrandTrendPoint } from "@/lib/db/dashboard";
@@ -137,26 +138,11 @@ export function DashboardContent({ company, data }: DashboardContentProps) {
           onRemoveDomain={handleRemoveDomain}
         />
 
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border p-10 text-center min-h-[50vh] bg-card/40 space-y-4">
-          <div className="rounded-full bg-primary/10 p-4 text-primary">
-            <Scan className="h-8 w-8" />
-          </div>
-          <div className="space-y-1.5 max-w-md">
-            <h2 className="text-xl font-bold tracking-tight text-foreground">
-              Run your first AI visibility scan
-            </h2>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              AnswerOS will test prompts across OpenAI ChatGPT, Anthropic Claude, Google Gemini, and Perplexity to measure your visibility score and competitor presence.
-            </p>
-          </div>
-
-          <div className="pt-2">
-            <Button onClick={handleRunScan} className="gap-2 shadow-sm">
-              <Scan className="h-4 w-4" />
-              Run Scan Now
-            </Button>
-          </div>
-        </div>
+        <PreScanLaunchpad
+          company={currentCompany}
+          starterPrompts={data?.starterPrompts ?? []}
+          onRunScan={handleRunScan}
+        />
       </div>
     );
   }
