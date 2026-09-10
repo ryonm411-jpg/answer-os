@@ -58,13 +58,13 @@ export function LandingNavbar() {
           </Link>
           <Link
             href="/sign-up"
-            onClick={() => handleCtaClick("get_started")}
+            onClick={() => handleCtaClick("sign_up")}
             className={cn(
               buttonVariants({ variant: "default", size: "sm" }),
               "bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
             )}
           >
-            Get Started
+            Sign up
           </Link>
         </div>
       </div>
