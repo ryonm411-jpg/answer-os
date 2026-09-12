@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { normalizeDomain } from "@/lib/utils/domain";
+import { currentUser } from "@clerk/nextjs/server";
 
 /**
  * Database helpers for company (domain) management.
@@ -10,28 +11,95 @@ import { normalizeDomain } from "@/lib/utils/domain";
 
 /**
  * Resolve the user's company by Clerk id, or `null`.
- * Used by the dashboard layout and page. Does not create the user row.
+ * Used by the dashboard layout and page.
+ *
+ * If user is not found by clerkId, attempts fallback lookup by email (via currentUser)
+ * to handle sign-in method changes or Clerk ID updates for existing accounts.
  */
 export async function getCompanyByClerkId(clerkId: string) {
-  const user = await prisma.user.findUnique({
+  // 1. Direct lookup by clerkId
+  let user = await prisma.user.findUnique({
     where: { clerkId },
     include: { company: true },
   });
+
+  if (user?.company) {
+    return user.company;
+  }
+
+  // 2. Fallback lookup by email if user/company not found by clerkId
+  try {
+    const clerkUser = await currentUser();
+    if (clerkUser) {
+      const emails = (clerkUser.emailAddresses ?? [])
+        .map((e) => e.emailAddress)
+        .filter(Boolean);
+
+      if (emails.length > 0) {
+        const userByEmail = await prisma.user.findFirst({
+          where: { email: { in: emails } },
+          include: { company: true },
+        });
+
+        if (userByEmail) {
+          user = await prisma.user.update({
+            where: { id: userByEmail.id },
+            data: { clerkId },
+            include: { company: true },
+          });
+          return user.company;
+        }
+      }
+    }
+  } catch {
+    // Ignore error if currentUser() context is unavailable
+  }
+
   return user?.company ?? null;
 }
 
 /**
- * Upsert the Clerk user row into the database.
+ * Sync / upsert the Clerk user row into the database.
+ * Checks by clerkId first, then by email to handle auth updates seamlessly.
  */
 export async function ensureUser(
   clerkId: string,
   email: string,
   name?: string | null
 ) {
-  return prisma.user.upsert({
+  // 1. Check by clerkId
+  const existingByClerkId = await prisma.user.findUnique({
     where: { clerkId },
-    update: {},
-    create: { clerkId, email, name: name ?? null },
+  });
+
+  if (existingByClerkId) {
+    return prisma.user.update({
+      where: { id: existingByClerkId.id },
+      data: {
+        email,
+        name: name !== undefined ? name : existingByClerkId.name,
+      },
+    });
+  }
+
+  // 2. Check by email
+  const existingByEmail = await prisma.user.findUnique({
+    where: { email },
+  });
+
+  if (existingByEmail) {
+    return prisma.user.update({
+      where: { id: existingByEmail.id },
+      data: {
+        clerkId,
+        name: name !== undefined ? name : existingByEmail.name,
+      },
+    });
+  }
+
+  // 3. Create new user if neither exists
+  return prisma.user.create({
+    data: { clerkId, email, name: name ?? null },
   });
 }
 
