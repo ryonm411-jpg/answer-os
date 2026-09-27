@@ -219,7 +219,7 @@ Update this file after every meaningful implementation change.
   3. Extended unit tests in `lib/providers/tiers.test.ts` — 147 tests passing across 25 test suites; `npx tsc --noEmit` clean.
 
 - Groq and NVIDIA Model Identifier Fix (2026-09-26):
-  1. Updated `DEFAULT_MODELS.groq` in `lib/providers/config.ts` from obsolete `"groq/compound"` (which returned 404 client errors on Groq API) to active `"qwen/qwen3.8-27b"` (verified live 200 response with sub-200ms latency).
+  1. Updated `DEFAULT_MODELS.groq` in `lib/providers/config.ts` from obsolete `"groq/compound"` (which returned 404 client errors on Groq API) to official production model `"openai/gpt-oss-120b"` (verified live 200 response with sub-300ms latency and 500 tps).
   2. Updated `DEFAULT_MODELS.nvidia` in `lib/providers/config.ts` from decommissioned `"deepseek-ai/deepseek-v4-flash-0731"` (410 Gone) to active `"deepseek-ai/deepseek-v4.1-flash"`.
   3. Updated test assertions in `lib/providers/config.test.ts` — all 147 tests passing, `npx tsc --noEmit` clean.
 

@@ -5,7 +5,7 @@ export const DEFAULT_MODELS: Record<AIProviderName, string> = {
   anthropic: "claude-3-5-sonnet-latest",
   gemini: "gemini-3.6-flash",
   perplexity: "sonar",
-  groq: "qwen/qwen3.8-27b",
+  groq: "openai/gpt-oss-120b",
   nvidia: "deepseek-ai/deepseek-v4.1-flash",
   openrouter: "openrouter/auto",
 };
