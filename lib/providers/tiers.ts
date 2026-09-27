@@ -23,6 +23,8 @@ export const ALL_PROVIDERS: AIProviderName[] = [
   ...PREMIUM_PROVIDERS,
 ];
 
+export const DEFAULT_FREE_PROVIDERS: AIProviderName[] = ["gemini"];
+
 /** Server-side only: which provider names may this entitlement level use? */
 export function resolveAllowedProviders(input: {
   entitled: boolean;
@@ -30,6 +32,30 @@ export function resolveAllowedProviders(input: {
 }): AIProviderName[] {
   const tier = input.entitled ? ALL_PROVIDERS : FREE_PROVIDERS;
   return tier.filter((name) => input.configured.includes(name));
+}
+
+/**
+ * Returns the default enabled providers when no custom preferences are stored.
+ * - Free tier: Gemini only (or first configured free provider fallback).
+ * - Paid tier: All configured providers.
+ */
+export function resolveDefaultProviders(input: {
+  entitled: boolean;
+  configured: AIProviderName[];
+}): AIProviderName[] {
+  if (input.entitled) {
+    return resolveAllowedProviders(input);
+  }
+  const defaultFreeConfigured = DEFAULT_FREE_PROVIDERS.filter((name) =>
+    input.configured.includes(name)
+  );
+  if (defaultFreeConfigured.length > 0) {
+    return defaultFreeConfigured;
+  }
+  const freeConfigured = FREE_PROVIDERS.filter((name) =>
+    input.configured.includes(name)
+  );
+  return freeConfigured.slice(0, FREE_TIER_MAX_ENABLED);
 }
 
 /**
@@ -42,13 +68,17 @@ export function resolveEffectiveProviders(input: {
   configured: AIProviderName[];
   enabled: AIProviderName[] | null;
 }): AIProviderName[] {
+  if (input.enabled === null) {
+    return resolveDefaultProviders({
+      entitled: input.entitled,
+      configured: input.configured,
+    });
+  }
   const tierAllowed = resolveAllowedProviders({
     entitled: input.entitled,
     configured: input.configured,
   });
-  const enabled = input.enabled;
-  if (enabled === null) return tierAllowed;
-  const effective = tierAllowed.filter((name) => enabled.includes(name));
+  const effective = tierAllowed.filter((name) => input.enabled!.includes(name));
   // Free-tier: cap to at most FREE_TIER_MAX_ENABLED free providers.
   if (!input.entitled) return effective.slice(0, FREE_TIER_MAX_ENABLED);
   return effective;

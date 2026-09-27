@@ -9,6 +9,7 @@ import {
   PREMIUM_PROVIDERS,
   PROVIDER_CATALOG,
   resolveAllowedProviders,
+  resolveDefaultProviders,
 } from "@/lib/providers";
 import type { AIProviderName } from "@/lib/providers";
 
@@ -41,12 +42,12 @@ export async function GET() {
   const entitled = company ? await hasActiveSubscription(company.id) : false;
   const configured = getAvailableProviders().map((p) => p.name);
   const stored = company ? await getEnabledProviders(company.id) : null;
-  const tierAllowed = resolveAllowedProviders({ entitled, configured });
+  const defaultEnabled = resolveDefaultProviders({ entitled, configured });
 
   const providers: ProviderStatus[] = PROVIDER_CATALOG.map((entry) => {
     const tier = PREMIUM_PROVIDERS.includes(entry.name) ? "premium" : "free";
     const enabled = stored === null
-      ? tierAllowed.includes(entry.name)
+      ? defaultEnabled.includes(entry.name)
       : stored.includes(entry.name);
 
     return {

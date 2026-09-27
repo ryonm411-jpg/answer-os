@@ -13,6 +13,7 @@ import {
   FREE_TIER_MAX_ENABLED,
   getAvailableProviders,
   resolveAllowedProviders,
+  resolveDefaultProviders,
 } from "@/lib/providers";
 import type { AIProviderName } from "@/lib/providers";
 
@@ -123,7 +124,7 @@ export async function DELETE() {
 
   const entitled = company ? await hasActiveSubscription(company.id) : false;
   const configured = getAvailableProviders().map((p) => p.name);
-  const defaults = resolveAllowedProviders({ entitled, configured });
+  const defaults = resolveDefaultProviders({ entitled, configured });
 
   return NextResponse.json({ data: { enabled: defaults } });
 }

@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   ALL_PROVIDERS,
   capFreeProviders,
+  DEFAULT_FREE_PROVIDERS,
   FREE_PROVIDERS,
   FREE_TIER_MAX_ENABLED,
   PREMIUM_PROVIDERS,
   resolveAllowedProviders,
+  resolveDefaultProviders,
   resolveEffectiveProviders,
 } from "./tiers";
 import type { AIProviderName } from "./types";
@@ -13,6 +15,7 @@ import type { AIProviderName } from "./types";
 describe("lib/providers/tiers", () => {
   it("exports correct provider lists for free-tier providers", () => {
     expect(FREE_PROVIDERS).toEqual(["gemini", "groq", "nvidia"]);
+    expect(DEFAULT_FREE_PROVIDERS).toEqual(["gemini"]);
     expect(PREMIUM_PROVIDERS).toEqual(["openai", "anthropic", "perplexity"]);
     expect(ALL_PROVIDERS).toEqual([
       "gemini",
@@ -73,6 +76,48 @@ describe("lib/providers/tiers", () => {
     });
   });
 
+  describe("resolveDefaultProviders", () => {
+    const allConfigured: AIProviderName[] = [
+      "openai",
+      "gemini",
+      "groq",
+      "nvidia",
+      "anthropic",
+      "perplexity",
+    ];
+
+    it("returns Gemini only for unpaid users when configured", () => {
+      const defaults = resolveDefaultProviders({
+        entitled: false,
+        configured: allConfigured,
+      });
+      expect(defaults).toEqual(["gemini"]);
+    });
+
+    it("falls back to another free provider if Gemini is not configured", () => {
+      const defaults = resolveDefaultProviders({
+        entitled: false,
+        configured: ["groq", "nvidia"],
+      });
+      expect(defaults).toEqual(["groq"]);
+    });
+
+    it("returns all configured providers for paid users", () => {
+      const defaults = resolveDefaultProviders({
+        entitled: true,
+        configured: allConfigured,
+      });
+      expect(defaults).toEqual([
+        "gemini",
+        "groq",
+        "nvidia",
+        "openai",
+        "anthropic",
+        "perplexity",
+      ]);
+    });
+  });
+
   describe("resolveEffectiveProviders", () => {
     const allConfigured: AIProviderName[] = [
       "openai",
@@ -83,13 +128,13 @@ describe("lib/providers/tiers", () => {
       "perplexity",
     ];
 
-    it("returns the tier default when no preference row exists (enabled: null)", () => {
+    it("returns Gemini only when unpaid and no preference row exists (enabled: null)", () => {
       const effective = resolveEffectiveProviders({
         entitled: false,
         configured: allConfigured,
         enabled: null,
       });
-      expect(effective).toEqual(FREE_PROVIDERS);
+      expect(effective).toEqual(["gemini"]);
     });
 
     it("returns all configured providers when paid and no preference row exists", () => {
