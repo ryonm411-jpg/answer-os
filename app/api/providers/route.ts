@@ -38,16 +38,9 @@ export async function GET() {
   }
 
   const company = await getCompanyByClerkId(clerkId);
-  if (!company) {
-    return NextResponse.json(
-      { error: { message: "Company not found" } },
-      { status: 404 }
-    );
-  }
-
-  const entitled = await hasActiveSubscription(company.id);
+  const entitled = company ? await hasActiveSubscription(company.id) : false;
   const configured = getAvailableProviders().map((p) => p.name);
-  const stored = await getEnabledProviders(company.id);
+  const stored = company ? await getEnabledProviders(company.id) : null;
   const tierAllowed = resolveAllowedProviders({ entitled, configured });
 
   const providers: ProviderStatus[] = PROVIDER_CATALOG.map((entry) => {

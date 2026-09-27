@@ -34,8 +34,8 @@ export async function PUT(req: Request) {
   const company = await getCompanyByClerkId(clerkId);
   if (!company) {
     return NextResponse.json(
-      { error: { message: "Company not found" } },
-      { status: 404 }
+      { error: { message: "Please add your company domain before customizing AI models." } },
+      { status: 400 }
     );
   }
 
@@ -117,16 +117,11 @@ export async function DELETE() {
   }
 
   const company = await getCompanyByClerkId(clerkId);
-  if (!company) {
-    return NextResponse.json(
-      { error: { message: "Company not found" } },
-      { status: 404 }
-    );
+  if (company) {
+    await deleteProviderPreferences(company.id);
   }
 
-  await deleteProviderPreferences(company.id);
-
-  const entitled = await hasActiveSubscription(company.id);
+  const entitled = company ? await hasActiveSubscription(company.id) : false;
   const configured = getAvailableProviders().map((p) => p.name);
   const defaults = resolveAllowedProviders({ entitled, configured });
 

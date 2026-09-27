@@ -213,6 +213,12 @@ Update this file after every meaningful implementation change.
   17. **Test Fixes**: Updated `lib/scan/parse.test.ts` expectation for `VivoBarefoot` (correctly normalized from `Vivobarefoot`). Updated `lib/recommendations/generator.test.ts` FAQ title expectation to match new copy. Fixed `@/` path alias import to relative paths in `lib/scan/parse.ts` and `lib/recommendations/generator.ts` for Vitest compatibility.
   18. **Verification**: 144 unit tests passing (`npm test`), 0 TypeScript errors (`npx tsc --noEmit`).
 
+- AI Models Tab & Billing Subscription Missing-Company Fix (2026-09-26):
+  1. Updated `GET /api/providers` (`app/api/providers/route.ts`) to return the default catalog view with free tier defaults (`entitled: false`, `stored: null`) when an authenticated user has no company created yet, rather than throwing a 404 "Company not found" error.
+  2. Updated `PUT /api/providers/preferences` and `DELETE /api/providers/preferences` (`app/api/providers/preferences/route.ts`) to handle missing company gracefully without raw 404 crashes.
+  3. Updated `GET /api/billing/subscription` (`app/api/billing/subscription/route.ts`) to return default empty subscription state when an authenticated user has no company created yet.
+  4. Verified: All 144 unit tests passing across 25 test suites, `npx tsc --noEmit` clean.
+
 ## Next Up
 
 1. Implement weekly email reports via Resend

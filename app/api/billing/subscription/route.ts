@@ -14,10 +14,14 @@ export async function GET() {
 
   const company = await getCompanyByClerkId(clerkId);
   if (!company) {
-    return NextResponse.json(
-      { error: { message: "Company not found" } },
-      { status: 404 }
-    );
+    return NextResponse.json({
+      data: {
+        status: null,
+        entitled: false,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+      },
+    });
   }
 
   const status = await getBillingStatusForCompany(company.id);
