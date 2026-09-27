@@ -38,9 +38,12 @@ Sentry.init({
 async function askWithRetry(provider: AIProvider, prompt: string): Promise<AIResponse> {
   const profile = getProviderProfile(provider.name);
   let lastError: unknown;
-  const maxAttempts = profile.tier === "free" ? 1 : profile.maxRetries;
-  // Tailor maxTokens per provider: Groq free tier enforces strict TPM limits (8,000 TPM)
-  const maxTokens = provider.name === "groq" ? 1500 : SCAN_MAX_TOKENS;
+  // Groq free tier: allow up to 2 attempts so a transient 429 can recover after backoff.
+  // Other free-tier providers still fail fast (maxAttempts=1).
+  const maxAttempts =
+    provider.name === "groq" ? 2 : profile.tier === "free" ? 1 : profile.maxRetries;
+  // Groq free tier: 900 tokens/request → ~8 safe requests per minute under 8k TPM.
+  const maxTokens = provider.name === "groq" ? 900 : SCAN_MAX_TOKENS;
 
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     try {
@@ -61,13 +64,16 @@ async function askWithRetry(provider: AIProvider, prompt: string): Promise<AIRes
           error.message.toLowerCase().includes("rate limit") ||
           error.message.toLowerCase().includes("quota"));
 
-      if (isRateLimit && profile.tier === "free") {
-        // Free tier rate limits fail fast without multi-attempt backoff loops
+      // Groq rate limits: back off for 15s to let the TPM window recover before retrying.
+      // Other free-tier rate limits: fail fast (no multi-attempt backoff).
+      if (isRateLimit && profile.tier === "free" && provider.name !== "groq") {
         throw error;
       }
 
       const backoff = isRateLimit
-        ? Math.min(2_000 * (attempt + 1), 5_000)
+        ? provider.name === "groq"
+          ? 15_000 // 15s: safely clear Groq's 1-minute TPM sliding window
+          : Math.min(2_000 * (attempt + 1), 5_000)
         : Math.min(SCAN_RETRY_BASE_MS * 2 ** attempt, SCAN_RETRY_MAX_MS);
 
       logger.warn("Provider call retrying", {
@@ -325,7 +331,10 @@ export const runScan = task({
           await createScanResults(scanId, batchResults);
 
           if (i + concurrency < prompts.length && !circuitBrokenReason) {
-            const delayMs = profile.tier === "free" ? 300 : 100;
+            // Groq free tier: 900 tokens/req at 8k TPM → ~8 req/min max.
+            // Wait 9s between batches to stay comfortably under the sliding window.
+            // Other free-tier providers (Gemini): 300ms is sufficient.
+            const delayMs = provider.name === "groq" ? 9_000 : profile.tier === "free" ? 300 : 100;
             await sleep(delayMs);
           }
         }
