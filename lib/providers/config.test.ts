@@ -34,7 +34,7 @@ describe("lib/providers/config", () => {
     expect(DEFAULT_MODELS.anthropic).toBe("claude-3-5-sonnet-latest");
     expect(DEFAULT_MODELS.gemini).toBe("gemini-3.6-flash");
     expect(DEFAULT_MODELS.perplexity).toBe("sonar");
-    expect(DEFAULT_MODELS.groq).toBe("openai/gpt-oss-120b");
+    expect(DEFAULT_MODELS.groq).toBe("openai/gpt-oss-20b");
     expect(DEFAULT_MODELS.nvidia).toBe("deepseek-ai/deepseek-v4.1-flash");
     expect(DEFAULT_MODELS.openrouter).toBe("openrouter/auto");
   });
