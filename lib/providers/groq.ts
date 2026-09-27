@@ -7,7 +7,7 @@ import {
   groqApiKey,
   resolveModel,
 } from "./config";
-import { toProviderError } from "./errors";
+import { AIProviderError, toProviderError } from "./errors";
 import type { AIProvider, AIProviderConfig, AIResponse } from "./types";
 
 export function isConfigured(): boolean {
@@ -38,6 +38,13 @@ export class GroqProvider implements AIProvider {
         maxRetries: 0,
         abortSignal: AbortSignal.timeout(config.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       });
+
+      if (!result.text) {
+        throw new AIProviderError(
+          `Provider groq empty output (retrying): model returned no text`,
+          { provider: "groq", retryable: true }
+        );
+      }
 
       return {
         content: result.text,

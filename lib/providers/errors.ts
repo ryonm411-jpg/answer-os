@@ -78,6 +78,20 @@ export function toProviderError(
       });
     }
 
+    // Groq-specific: empty model output is transient, not a permanent client failure
+    if (
+      message.toLowerCase().includes("model output must contain either output text or tool calls") ||
+      message.toLowerCase().includes("model output error") ||
+      message.toLowerCase().includes("empty output")
+    ) {
+      return new AIProviderError(`Provider ${provider} empty output (retrying): ${message}`, {
+        provider,
+        retryable: true,
+        statusCode,
+        cause: err,
+      });
+    }
+
     if (statusCode && statusCode >= 400 && statusCode < 500) {
       return new AIProviderError(`Provider ${provider} client error (${statusCode}): ${message}`, {
         provider,
