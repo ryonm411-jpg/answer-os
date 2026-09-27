@@ -218,6 +218,11 @@ Update this file after every meaningful implementation change.
   2. Updated `resolveEffectiveProviders` (`lib/providers/tiers.ts`), `GET /api/providers` (`app/api/providers/route.ts`), and `DELETE /api/providers/preferences` (`app/api/providers/preferences/route.ts`) to use `resolveDefaultProviders`, ensuring new/uncustomized free accounts default to Google Gemini only (1 of 6 enabled).
   3. Extended unit tests in `lib/providers/tiers.test.ts` — 147 tests passing across 25 test suites; `npx tsc --noEmit` clean.
 
+- Groq and NVIDIA Model Identifier Fix (2026-09-26):
+  1. Updated `DEFAULT_MODELS.groq` in `lib/providers/config.ts` from obsolete `"groq/compound"` (which returned 404 client errors on Groq API) to active `"qwen/qwen3.8-27b"` (verified live 200 response with sub-200ms latency).
+  2. Updated `DEFAULT_MODELS.nvidia` in `lib/providers/config.ts` from decommissioned `"deepseek-ai/deepseek-v4-flash-0731"` (410 Gone) to active `"deepseek-ai/deepseek-v4.1-flash"`.
+  3. Updated test assertions in `lib/providers/config.test.ts` — all 147 tests passing, `npx tsc --noEmit` clean.
+
 ## Next Up
 
 1. Implement weekly email reports via Resend
