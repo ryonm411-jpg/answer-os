@@ -1,3 +1,5 @@
+import { normalizeEntityName } from "../utils/entity";
+
 export interface ScanResultForAnalysis {
   promptId: string;
   promptText: string;
@@ -33,8 +35,8 @@ export function generateRecommendations(
   if (validResults.length === 0) {
     return [
       {
-        title: "Ensure AI crawlers can index your primary landing page",
-        description: `All prompt checks returned provider errors. Verify that ${context.domain} allows search crawler access in robots.txt and has no active CAPTCHA blocks.`,
+        title: "Ensure AI search crawlers can index your website",
+        description: `All search checks encountered provider connection issues. Verify that ${context.domain} is publicly accessible and allows web crawler access.`,
         category: "Indexing & Crawlability",
         priority: 1,
         estimatedImpact: null,
@@ -53,17 +55,17 @@ export function generateRecommendations(
     }
   };
 
-  // 1. Analyze Competitor Wins on Missed Prompts (Comparison Pages)
+  // 1. Analyze Competitor Wins on Missed Searches (Comparison Pages)
   const missedResults = validResults.filter((r) => !r.mentioned);
   const competitorWins = new Map<string, number>();
 
   for (const r of missedResults) {
     for (const comp of r.competitorsMentioned) {
       if (comp.name && comp.name.trim().length > 0) {
-        const cName = comp.name.trim();
+        const cName = normalizeEntityName(comp.name);
         const lower = cName.toLowerCase();
         // Ignore synthetic or placeholder names
-        if (lower !== "otherco" && lower !== "other company" && lower !== "unknown competitor") {
+        if (lower && lower !== "otherco" && lower !== "other company" && lower !== "unknown competitor" && lower !== "other" && lower !== "n/a") {
           competitorWins.set(cName, (competitorWins.get(cName) || 0) + 1);
         }
       }
@@ -79,21 +81,22 @@ export function generateRecommendations(
   for (const [compName, winCount] of sortedCompetitors.slice(0, 2)) {
     addRecommendation({
       title: `Create a dedicated ${context.companyName} vs ${compName} comparison page`,
-      description: `${compName} was cited in ${winCount} tested prompt(s) where ${context.companyName} was not mentioned. Publishing a structured comparison page highlighting key differentiators will improve AI model indexing.`,
+      description: `Observed: ${compName} was cited in ${winCount} AI search question(s) where ${context.companyName} was not mentioned. Why it matters: AI models frequently cite comparison articles when evaluating alternatives. Action: Publish a clear comparison page on ${context.domain} highlighting key strengths and differences.`,
       category: "Comparison Pages",
       priority: 1,
       estimatedImpact: null,
     });
   }
 
-  // 2. Analyze Category Performance (FAQ & Schema Recommendations)
+  // 2. Analyze Category Performance (FAQ & Question Knowledge Bases)
   const categoryStats = new Map<
     string,
     { total: number; mentioned: number; missed: number }
   >();
 
   for (const r of validResults) {
-    const cat = r.category || "General";
+    const rawCat = r.category?.trim();
+    const cat = (!rawCat || rawCat.toLowerCase() === "other") ? "Product & Buying Questions" : rawCat;
     const entry = categoryStats.get(cat) || { total: 0, mentioned: 0, missed: 0 };
     entry.total += 1;
     if (r.mentioned) {
@@ -108,8 +111,8 @@ export function generateRecommendations(
     const mentionRate = stats.mentioned / stats.total;
     if (mentionRate < 0.5 && stats.missed >= 1) {
       addRecommendation({
-        title: `Publish a comprehensive ${category} FAQ & Knowledge Base`,
-        description: `${context.companyName} was not mentioned in ${stats.missed} of ${stats.total} tested ${category} prompt(s). Adding structured FAQ schema and detailed documentation on ${context.domain} will help LLMs cite your official site.`,
+        title: `Publish answers for ${category} questions`,
+        description: `Observed: ${context.companyName} was absent in ${stats.missed} of ${stats.total} tested ${category} searches. Why it matters: AI engines synthesize answers from clear, structured knowledge and FAQ pages. Action: Add structured FAQ content addressing common use cases and compatibility on ${context.domain}.`,
         category: "FAQ & Schema",
         priority: stats.missed >= 2 || mentionRate === 0 ? 1 : 2,
         estimatedImpact: null,
@@ -117,15 +120,15 @@ export function generateRecommendations(
     }
   }
 
-  // 3. Analyze Rank #2+ Mentioned Prompts (Product Positioning Optimization)
+  // 3. Analyze Rank #2+ Mentioned Prompts (Positioning Optimization)
   const secondaryRankResults = validResults.filter(
     (r) => r.mentioned && r.position !== null && r.position > 1
   );
 
   if (secondaryRankResults.length >= 1) {
     addRecommendation({
-      title: `Optimize product positioning to capture #1 AI recommendation spot`,
-      description: `Your brand is mentioned in ${secondaryRankResults.length} prompt(s) but ranked behind competitors. Adding explicit feature comparison tables and customer proof points will push ${context.companyName} to the top #1 spot.`,
+      title: `Strengthen core product positioning for top AI recommendations`,
+      description: `Observed: Your brand was mentioned in ${secondaryRankResults.length} search(es) but ranked behind alternatives. Why it matters: AI models prioritize options with explicit use-case proof points. Action: Add specific differentiator tables and verified specifications to ${context.domain}.`,
       category: "Product Positioning",
       priority: 2,
       estimatedImpact: null,
@@ -135,8 +138,8 @@ export function generateRecommendations(
   // 4. Fallback / Baseline Best Practice Recommendation
   if (recommendations.length === 0) {
     addRecommendation({
-      title: `Add Organization & Product Schema.org structured data`,
-      description: `Your brand currently has strong AI visibility across tested prompts. Implement JSON-LD Organization and Product schema markup on ${context.domain} to lock in top AI search citations across future model updates.`,
+      title: `Add structured Schema.org markup to key product pages`,
+      description: `Observed: Strong current AI visibility across tested questions. Why it matters: Structured JSON-LD metadata helps AI crawlers parse your company details accurately. Action: Ensure Product and Organization schema markup are present on ${context.domain}.`,
       category: "Schema Markup",
       priority: 3,
       estimatedImpact: null,
@@ -146,8 +149,8 @@ export function generateRecommendations(
   // Always append a low-priority general optimization tip if space permits
   if (recommendations.length < 5) {
     addRecommendation({
-      title: `Publish clear pricing and feature breakdown tables`,
-      description: `LLMs rely heavily on transparent pricing structures and feature matrices when generating buyer recommendations. Ensure ${context.domain} includes accessible pricing details.`,
+      title: `Publish clear pricing and product specifications`,
+      description: `Observed: General buyer discovery queries look for explicit details. Why it matters: AI assistants reference transparent pricing and specifications when recommending options. Action: Ensure ${context.domain} has clear, accessible product information.`,
       category: "Pricing & Transparency",
       priority: 3,
       estimatedImpact: null,

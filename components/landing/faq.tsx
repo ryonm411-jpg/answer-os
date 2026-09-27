@@ -7,52 +7,67 @@ const FAQS = [
   {
     question: "What does AnswerOS actually scan?",
     answer:
-      "AnswerOS scans buyer-intent questions across up to 6 AI search providers (Google Gemini, Groq, NVIDIA NIM, OpenAI, Anthropic Claude, and Perplexity). Each check evaluates whether your brand is mentioned, at what position, with what sentiment, and what competitors/citations appear. Results are cached in Redis with a 24-hour TTL to save AI costs.",
+      "AnswerOS scans buyer-intent queries across 6 AI providers (Google Gemini, Groq, NVIDIA NIM, OpenAI ChatGPT, Anthropic Claude, and Perplexity). Each scan evaluates whether your brand is mentioned, what position rank it holds, the sentiment tone, and which competing brands and web publications are cited.",
+  },
+  {
+    question: "How does the free scan work?",
+    answer:
+      "When you enter your company website, AnswerOS generates category-specific buyer questions and queries our free AI providers (Gemini, Groq, NVIDIA NIM). You get an instant preview of your brand's AI search footprint with zero payment or credit card required.",
+  },
+  {
+    question: "What exactly is AI visibility?",
+    answer:
+      "AI visibility measures how frequently and favorably your brand appears when prospective customers ask AI search engines and assistants for recommendations, comparisons, and solutions in your category.",
+  },
+  {
+    question: "What do I get without paying?",
+    answer:
+      "On the Free Tier, you get full domain onboarding, prompt workspace access, and AI visibility scanning across 3 core providers (Gemini, Groq, NVIDIA NIM), plus visibility scoring, competitor mentions, and prioritized recommendations.",
   },
   {
     question: "How long does a scan take?",
     answer:
-      "Scans execute asynchronously in the background via Trigger.dev worker tasks so nothing blocks your web browser. A typical scan across 15+ prompt checks finishes in just 2 to 5 minutes.",
+      "Scans run in the background so your browser never freezes. A typical scan across a full set of category prompts completes in approximately 2 to 4 minutes.",
   },
   {
-    question: "What is the visibility score and how is it calculated?",
+    question: "Why can AI answers change between scans?",
     answer:
-      "Your visibility score is a 0–100 metric calculated strictly server-side using five weighted factors: Mention Rate (30%), Average Rank (25%), Sentiment (20%), Competitor Share (15%), and Source Authority (10%). The current MVP maximum score ceiling is 95/100 until deeper web crawler data is released.",
+      "AI models generate responses probabilistically and continuously ingest updated web data, reviews, and citations. That's why recurring monitoring is essential to detect when your rank or competitor share shifts.",
   },
   {
-    question: "What's included in the free tier?",
+    question: "How is the visibility score calculated?",
     answer:
-      "The free tier includes full domain onboarding, prompt workspace access, and AI search visibility scans across all free AI models (Gemini, Groq LPU, and NVIDIA NIM). Premium models (OpenAI ChatGPT, Anthropic Claude, Perplexity) unlock when you subscribe.",
+      "Your 0–100 score is computed server-side using five weighted factors: Mention Rate (30%), Average Rank (25%), Sentiment (20%), Competitor Share (15%), and Source Authority (10%).",
   },
   {
-    question: "Do I need a credit card to try it?",
+    question: "Does AnswerOS guarantee that AI will recommend my brand?",
     answer:
-      "No! You can sign up with email or Google, onboard your domain, review your prompts, and run your first scan on the free tier without entering any credit card details.",
+      "No. No platform can control what AI models ultimately output. AnswerOS provides empirical diagnostic data, citation tracking, and evidence-based recommendations to help you create the content and schema that AI engines favor.",
   },
   {
     question: "How is my company data handled?",
     answer:
-      "We only store your company domain, competitor domains, prompt set, and scan result metrics required to compute your dashboard. All product analytics are telemetry-only with strict no-PII enforcement.",
+      "We only store your company domain, competitor domains, prompt sets, and scan metrics necessary to compute your dashboard. All analytics are strictly telemetry-only with zero personal data collection.",
   },
 ];
 
 export function LandingFaq() {
   return (
-    <section id="faq" className="py-20 border-b border-border/60 bg-secondary/10">
+    <section id="faq" className="py-20 md:py-24 border-b border-[#252D3A] bg-[#101521]/60">
       <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 space-y-12">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto space-y-4">
           <Badge
             variant="outline"
-            className="px-3 py-1 text-xs font-medium border-border text-muted-foreground uppercase tracking-wider"
+            className="px-3 py-1 text-xs font-medium border-[#252D3A] bg-[#141A26] text-[#5B8CFF] uppercase tracking-wider"
           >
-            Got Questions?
+            FAQ
           </Badge>
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-[#F5F7FA]">
             Frequently Asked Questions
           </h2>
-          <p className="text-base sm:text-lg text-muted-foreground">
-            Everything you need to know about AI search visibility and AnswerOS.
+          <p className="text-base sm:text-lg text-[#9AA4B2]">
+            Clear, transparent answers about AI search visibility and how AnswerOS works.
           </p>
         </div>
 
@@ -61,15 +76,15 @@ export function LandingFaq() {
           {FAQS.map((faq, index) => (
             <details
               key={index}
-              className="group rounded-xl border border-border/80 bg-card/60 p-5 font-sans [&_summary::-webkit-details-marker]:hidden transition-all duration-200 open:bg-card/90 open:border-primary/40"
+              className="group rounded-2xl border border-[#252D3A] bg-[#141A26]/80 p-5 font-sans [&_summary::-webkit-details-marker]:hidden transition-all duration-200 open:bg-[#141A26] open:border-[#5B8CFF]/40 shadow-sm"
             >
-              <summary className="flex cursor-pointer items-center justify-between gap-4 font-semibold text-foreground text-base hover:text-primary transition-colors">
+              <summary className="flex cursor-pointer items-center justify-between gap-4 font-semibold text-[#F5F7FA] text-base hover:text-[#5B8CFF] transition-colors">
                 <span>{faq.question}</span>
-                <span className="shrink-0 transition-transform duration-200 group-open:-rotate-180 text-muted-foreground group-open:text-primary">
+                <span className="shrink-0 transition-transform duration-200 group-open:-rotate-180 text-[#9AA4B2] group-open:text-[#5B8CFF]">
                   <ChevronDown className="h-5 w-5" />
                 </span>
               </summary>
-              <p className="mt-3 text-sm text-muted-foreground leading-relaxed border-t border-border/40 pt-3">
+              <p className="mt-3 text-sm text-[#9AA4B2] leading-relaxed border-t border-[#252D3A]/60 pt-3">
                 {faq.answer}
               </p>
             </details>

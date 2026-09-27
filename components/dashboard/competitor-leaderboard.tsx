@@ -9,6 +9,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { CompetitorLeaderboardRow } from "@/lib/db/dashboard";
+import { normalizeEntityName } from "@/lib/utils/entity";
 
 interface CompetitorLeaderboardProps {
   competitors: CompetitorLeaderboardRow[];
@@ -104,13 +105,13 @@ export function CompetitorLeaderboard({
                   </th>
                   <th scope="col" className="py-2 px-2 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <span>Position</span>
+                      <span>Avg. position</span>
                       <Tooltip>
                         <TooltipTrigger className="inline-flex items-center text-muted-foreground hover:text-foreground">
                           <Info className="h-3 w-3 text-muted-foreground cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent side="top" className="text-xs max-w-xs">
-                          Average list rank position when mentioned in AI search answers (lower is better).
+                          Average position in the recommendation list when mentioned (lower is better — position 1 means mentioned first).
                         </TooltipContent>
                       </Tooltip>
                     </div>
@@ -133,10 +134,10 @@ export function CompetitorLeaderboard({
                       <div className="flex items-center gap-2">
                         {/* Placeholder logo icon / favicon */}
                         <div className="h-5 w-5 rounded bg-secondary/80 flex items-center justify-center text-[10px] font-bold text-primary shrink-0 border border-border/60">
-                          {row.name.charAt(0).toUpperCase()}
+                          {normalizeEntityName(row.name).charAt(0).toUpperCase()}
                         </div>
                         <span className="truncate max-w-[140px]">
-                          {row.name}
+                          {normalizeEntityName(row.name)}
                         </span>
                       </div>
                     </td>

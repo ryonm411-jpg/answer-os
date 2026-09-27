@@ -51,38 +51,33 @@ export function VisibilityScoreCard({
     return "text-rose-500 border-rose-500/30 bg-rose-500/10";
   };
 
-  const getScoreLabel = (val: number | null) => {
-    if (val === null) return "Score Unavailable";
-    if (val >= 80) return "High AI Visibility";
-    if (val >= 60) return "Moderate AI Visibility";
-    if (val >= 40) return "Fair AI Visibility";
-    return "Low AI Visibility";
-  };
-
   const getTabDescription = () => {
     if (numericScore === null) {
-      return "Run a scan across tested AI providers to calculate your business visibility score.";
+      return "Run a scan to see how often AI recommends your brand when customers search for products or services like yours.";
     }
     if (activeTab === "branded") {
-      return "Measures how favorably AI engines respond when buyers explicitly ask about your brand name in their question.";
+      return "How AI responds when customers explicitly ask about your brand by name.";
     }
     if (activeTab === "organic") {
-      return "Measures how often AI models organically recommend your brand when buyers search for solutions without mentioning your name.";
+      return "How often AI recommends your brand when customers search without mentioning your name.";
     }
-    return "Combines mention rate, position rank, sentiment tone, competitor share, and source authority across all tested prompts.";
+    return "How often AI mentions your brand, where you appear, how you compare to competitors, and the quality of sources citing you.";
   };
+
+  const tabLabel = activeTab === "branded" ? "Brand searches" : activeTab === "organic" ? "General searches" : "All searches";
 
   return (
     <Card className="border-border bg-card/60 backdrop-blur-sm relative overflow-hidden flex flex-col justify-between">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-          Visibility Score
+          AI Visibility Score
           <Tooltip>
             <TooltipTrigger aria-label="Score calculation info" className="text-muted-foreground hover:text-foreground">
               <Info className="h-4 w-4" />
             </TooltipTrigger>
             <TooltipContent className="max-w-xs text-xs">
-              Weighted algorithm evaluating mention rate (30%), average rank position (25%), sentiment tone (20%), competitor share (15%), and source authority (10%).
+              <p className="font-semibold mb-1">How is this calculated?</p>
+              <p>Based on how often your brand is mentioned, where it appears, how positively AI describes it, how visible competitors are, and how authoritative the sources are.</p>
             </TooltipContent>
           </Tooltip>
         </CardTitle>
@@ -91,20 +86,20 @@ export function VisibilityScoreCard({
           <Tabs value={activeTab} onValueChange={(v) => handleTabChange(v as "overall" | "branded" | "organic")}>
             <TabsList className="h-7 p-0.5 bg-muted/60">
               <TabsTrigger value="overall" className="text-xs h-6 px-2">
-                Overall
+                All searches
               </TabsTrigger>
               <TabsTrigger value="branded" className="text-xs h-6 px-2">
-                Branded
+                Brand searches
               </TabsTrigger>
               <TabsTrigger value="organic" className="text-xs h-6 px-2">
-                Organic
+                General searches
               </TabsTrigger>
             </TabsList>
           </Tabs>
 
           {numericScore !== null && (
             <span className="text-xs font-medium text-muted-foreground hidden sm:inline">
-              {completedAt ? `Scanned ${new Date(completedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "Scale: 0–100"} (MVP Ceiling: 95)
+              {completedAt ? `Scanned ${new Date(completedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "Scale: 0–100"}
             </span>
           )}
         </div>
@@ -131,21 +126,15 @@ export function VisibilityScoreCard({
           <div className="space-y-1.5 min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <div className="text-lg font-semibold text-foreground">
-                {getScoreLabel(numericScore)}
+                {numericScore !== null ? `AI Visibility Score` : "No score yet"}
               </div>
-              <span className="text-xs font-medium text-muted-foreground capitalize">
-                ({activeTab})
+              <span className="text-xs font-medium text-muted-foreground">
+                ({tabLabel})
               </span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               {getTabDescription()}
             </p>
-
-            {numericScore !== null && numericScore >= 90 && (
-              <p className="text-[11px] text-muted-foreground/80 italic">
-                Note: 95 is the maximum reach in MVP while citation analysis is in active development.
-              </p>
-            )}
           </div>
         </div>
       </CardContent>

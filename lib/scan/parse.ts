@@ -1,3 +1,5 @@
+import { normalizeEntityName } from "../utils/entity";
+
 export type ScanSentiment = "POSITIVE" | "NEUTRAL" | "NEGATIVE";
 
 export interface ParsedCompetitorMention {
@@ -86,12 +88,13 @@ export function parseScanResponse(content: string): ParseResult {
     for (const c of rawCompetitors) {
       if (typeof c !== "object" || c === null) continue;
       const comp = c as Record<string, unknown>;
-      const name = typeof comp.name === "string" ? comp.name.trim() : "";
+      const rawName = typeof comp.name === "string" ? comp.name.trim() : "";
+      const name = normalizeEntityName(rawName);
       if (!name) continue;
 
       // Filter out synthetic/placeholder competitor labels per spec rule 9
       const lowerName = name.toLowerCase();
-      if (lowerName === "otherco" || lowerName === "other company" || lowerName === "unknown competitor") {
+      if (lowerName === "otherco" || lowerName === "other company" || lowerName === "unknown competitor" || lowerName === "other" || lowerName === "n/a") {
         continue;
       }
 
@@ -182,11 +185,12 @@ export function parseUnbrandedScanResponse(
   for (const item of rawList) {
     if (typeof item !== "object" || item === null) continue;
     const comp = item as Record<string, unknown>;
-    const name = typeof comp.name === "string" ? comp.name.trim() : "";
+    const rawName = typeof comp.name === "string" ? comp.name.trim() : "";
+    const name = normalizeEntityName(rawName);
     if (!name) continue;
 
     const lowerName = name.toLowerCase();
-    if (lowerName === "otherco" || lowerName === "other company" || lowerName === "unknown competitor") {
+    if (lowerName === "otherco" || lowerName === "other company" || lowerName === "unknown competitor" || lowerName === "other" || lowerName === "n/a") {
       continue;
     }
 

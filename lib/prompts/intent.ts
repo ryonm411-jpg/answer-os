@@ -27,13 +27,13 @@ export function isValidIntent(value: unknown): value is PromptIntent {
  * `PURCHASE_INTENT` renders as "Purchase intent" per spec §6.
  */
 export const INTENT_LABELS: Record<PromptIntent, string> = {
-  COMMERCIAL: "Commercial",
+  PRODUCT: "Product discovery",
   COMPARISON: "Comparison",
-  PROBLEM: "Problem",
-  PRODUCT: "Product",
-  BRAND: "Brand",
-  ALTERNATIVE: "Alternative",
-  PURCHASE_INTENT: "Purchase intent",
+  BRAND: "Brand trust",
+  COMMERCIAL: "Buying decision",
+  PURCHASE_INTENT: "Where to buy",
+  PROBLEM: "Problem solving",
+  ALTERNATIVE: "Alternatives",
 };
 
 /**

@@ -5,20 +5,21 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --bg-base: #0a0a0b;
-  --bg-surface: #141416;
-  --bg-elevated: #1c1c1f;
-  --text-primary: #f4f4f5;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --accent-primary: #3b82f6;
-  --accent-success: #22c55e;
+  --bg-base: #080B12;
+  --bg-surface: #101521;
+  --bg-elevated: #141A26;
+  --text-primary: #F5F7FA;
+  --text-secondary: #9AA4B2;
+  --text-muted: #6B778C;
+  --accent-primary: #5B8CFF;
+  --accent-secondary: #8B6CFF;
+  --accent-success: #29C78F;
   --accent-warning: #f59e0b;
   --accent-danger: #ef4444;
-  --border-default: #27272a;
-  --border-hover: #3f3f46;
+  --border-default: #252D3A;
+  --border-hover: #374254;
   --state-error: #ef4444;
-  --state-success: #22c55e;
+  --state-success: #29C78F;
 
   --background: var(--bg-base);
   --foreground: var(--text-primary);
@@ -41,11 +42,11 @@
   --ring: var(--accent-primary);
   --radius: 0.5rem;
 
-  --chart-1: #3b82f6;
-  --chart-2: #22c55e;
+  --chart-1: #5B8CFF;
+  --chart-2: #29C78F;
   --chart-3: #f59e0b;
   --chart-4: #ef4444;
-  --chart-5: #a855f7;
+  --chart-5: #8B6CFF;
 
   --sidebar: var(--bg-surface);
   --sidebar-foreground: var(--text-primary);
@@ -65,6 +66,7 @@
   --color-text-secondary: var(--text-secondary);
   --color-text-muted: var(--text-muted);
   --color-accent-primary: var(--accent-primary);
+  --color-accent-secondary: var(--accent-secondary);
   --color-accent-success: var(--accent-success);
   --color-accent-warning: var(--accent-warning);
   --color-accent-danger: var(--accent-danger);

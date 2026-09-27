@@ -58,7 +58,7 @@ export function PromptGenerationActions({
     setError("");
 
     if (!productDescription.trim()) {
-      setError("Product description is required to ground prompt generation");
+      setError("Please describe what your business sells so AnswerOS can find relevant customer searches.");
       return;
     }
 
@@ -67,7 +67,7 @@ export function PromptGenerationActions({
       await onSaveProfile({ productDescription: productDescription.trim(), industry: industry.trim() });
       setIsEditingProfile(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save Business Profile");
+      setError(err instanceof Error ? err.message : "Failed to save business details");
     } finally {
       setIsSaving(false);
     }
@@ -76,7 +76,7 @@ export function PromptGenerationActions({
   const handleGenerateClick = async () => {
     if (!initialProductDesc && !productDescription.trim()) {
       setIsEditingProfile(true);
-      setError("Please save a Business Profile first so AI can generate relevant prompts.");
+      setError("Please provide a brief description of your business first.");
       return;
     }
     await onGenerateSuggestions(promptCount);
@@ -84,14 +84,14 @@ export function PromptGenerationActions({
 
   return (
     <div className="space-y-4">
-      {/* Business Profile Accordion Card */}
+      {/* About Your Business Accordion Card */}
       <Card className="border-border bg-card">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Building2 className="h-4 w-4 text-primary" />
               <span className="text-sm font-semibold text-foreground">
-                Business Profile (Grounded AI Context)
+                About Your Business
               </span>
             </div>
             <Button
@@ -106,7 +106,7 @@ export function PromptGenerationActions({
                 </>
               ) : (
                 <>
-                  {initialProductDesc ? "Edit Profile" : "Set Profile"} <ChevronDown className="h-3 w-3 ml-1" />
+                  {initialProductDesc ? "Edit details" : "Add details"} <ChevronDown className="h-3 w-3 ml-1" />
                 </>
               )}
             </Button>
@@ -114,11 +114,13 @@ export function PromptGenerationActions({
 
           {!isEditingProfile && initialProductDesc ? (
             <div className="text-xs text-muted-foreground space-y-1 bg-muted/30 p-2.5 rounded-md border border-border/50">
-              <p>
-                <strong className="text-foreground">Category:</strong> {initialIndustry || "General"}
-              </p>
+              {initialIndustry && (
+                <p>
+                  <strong className="text-foreground">Category:</strong> {initialIndustry}
+                </p>
+              )}
               <p className="line-clamp-2">
-                <strong className="text-foreground">Product Description:</strong> {initialProductDesc}
+                <strong className="text-foreground">Offering & Target Audience:</strong> {initialProductDesc}
               </p>
             </div>
           ) : null}
@@ -133,11 +135,11 @@ export function PromptGenerationActions({
 
               <div className="space-y-1.5">
                 <Label htmlFor="category-input" className="text-xs">
-                  Primary Category / Industry
+                  Business category / Industry
                 </Label>
                 <Input
                   id="category-input"
-                  placeholder="e.g. Barefoot Footwear or B2B SaaS CRM"
+                  placeholder="e.g. Footwear, PC Hardware, Accounting Firm, Project Software"
                   value={industry}
                   onChange={(e) => setIndustry(e.target.value)}
                   className="h-8 text-xs"
@@ -146,11 +148,11 @@ export function PromptGenerationActions({
 
               <div className="space-y-1.5">
                 <Label htmlFor="product-desc-input" className="text-xs">
-                  Product / Solution Description *
+                  What you sell and who it&apos;s for *
                 </Label>
                 <Textarea
                   id="product-desc-input"
-                  placeholder="Describe what your company sells, who it serves, and key use cases. e.g. Minimalist barefoot footwear for running, walking, and natural foot health."
+                  placeholder="Describe your products, services, and target customers. This helps AnswerOS discover the exact questions your customers ask AI."
                   value={productDescription}
                   onChange={(e) => setProductDescription(e.target.value)}
                   rows={3}
@@ -160,7 +162,7 @@ export function PromptGenerationActions({
 
               <div className="flex justify-end">
                 <Button type="submit" size="sm" disabled={isSaving} className="h-8 text-xs">
-                  {isSaving ? "Saving..." : "Save Business Profile"}
+                  {isSaving ? "Saving..." : "Save Details"}
                 </Button>
               </div>
             </form>
@@ -171,7 +173,7 @@ export function PromptGenerationActions({
       {/* Action bar with Generate button & Count Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
-          AI generation uses your Business Profile to discover high-value buyer prompts across all 7 intents.
+          AnswerOS automatically discovers high-intent questions across discovery, comparison, and buying decisions.
         </p>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -180,16 +182,16 @@ export function PromptGenerationActions({
             onValueChange={(val) => setPromptCount(Number(val))}
             disabled={isGenerating || isLocked}
           >
-            <SelectTrigger className="h-9 w-[130px] text-xs">
-              <SelectValue placeholder="6 Prompts" />
+            <SelectTrigger className="h-9 w-[140px] text-xs">
+              <SelectValue placeholder="6 Questions" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="3">3 Prompts</SelectItem>
-              <SelectItem value="6">6 Prompts</SelectItem>
-              <SelectItem value="9">9 Prompts</SelectItem>
-              <SelectItem value="12">12 Prompts</SelectItem>
-              <SelectItem value="15">15 Prompts</SelectItem>
-              <SelectItem value="20">20 Prompts</SelectItem>
+              <SelectItem value="3">3 Questions</SelectItem>
+              <SelectItem value="6">6 Questions</SelectItem>
+              <SelectItem value="9">9 Questions</SelectItem>
+              <SelectItem value="12">12 Questions</SelectItem>
+              <SelectItem value="15">15 Questions</SelectItem>
+              <SelectItem value="20">20 Questions</SelectItem>
             </SelectContent>
           </Select>
 
@@ -199,7 +201,7 @@ export function PromptGenerationActions({
             className="gap-2 shrink-0"
           >
             <Sparkles className="h-4 w-4" />
-            <span>{isGenerating ? "Generating..." : "Generate AI Suggestions"}</span>
+            <span>{isGenerating ? "Finding questions..." : "Find AI Search Questions"}</span>
           </Button>
         </div>
       </div>

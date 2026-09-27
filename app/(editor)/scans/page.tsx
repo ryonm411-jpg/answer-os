@@ -121,10 +121,10 @@ export default function ScanHistoryPage() {
             <div className="p-2 rounded-lg bg-primary/10 text-primary">
               <History className="h-5 w-5" />
             </div>
-            <h1 className="text-2xl font-bold tracking-tight">Scan History</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Reports</h1>
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            Historical log of AI search visibility scans, prompt coverage metrics, and LLM engine health.
+            Visibility over time — track how your brand&apos;s AI presence has changed across every scan.
           </p>
         </div>
 

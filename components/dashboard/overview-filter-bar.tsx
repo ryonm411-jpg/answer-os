@@ -86,7 +86,7 @@ export function OverviewFilterBar({
             className="bg-transparent border-none text-xs font-medium text-foreground focus:outline-none cursor-pointer pr-1"
           >
             <option value="all" className="bg-card text-foreground">
-              All Models
+              All AI
             </option>
             {PROVIDER_CATALOG.map((p) => (
               <option key={p.name} value={p.name} className="bg-card text-foreground">
@@ -111,13 +111,13 @@ export function OverviewFilterBar({
             className="bg-transparent border-none text-xs font-medium text-foreground focus:outline-none cursor-pointer pr-1"
           >
             <option value="all" className="bg-card text-foreground">
-              All Prompts
+              All searches
             </option>
             <option value="organic" className="bg-card text-foreground">
-              Organic (Unbranded)
+              General searches
             </option>
             <option value="branded" className="bg-card text-foreground">
-              Branded Prompts
+              Brand searches
             </option>
           </select>
         </div>

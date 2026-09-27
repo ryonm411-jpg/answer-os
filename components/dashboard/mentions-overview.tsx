@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, Bot, ChevronRight, Info } from "lucide-react";
+import { AlertCircle, Bot, ChevronRight, Info, RefreshCw } from "lucide-react";
 import type { ScoreSummary } from "@/lib/scoring/calculator";
 import type { LatestScanSummary } from "@/lib/db/dashboard";
 import { FailedChecksModal } from "@/components/dashboard/failed-checks-modal";
@@ -40,34 +40,57 @@ export function MentionsOverview({ summary, latestScan }: MentionsOverviewProps)
       <Card className="border-border bg-card/60 backdrop-blur-sm">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-semibold text-foreground flex items-center justify-between">
-            <span>Scan Overview &amp; Provider Metrics</span>
+            <span>Scan Coverage</span>
             <span className="text-xs font-normal text-muted-foreground">
-              {engineCount} Active LLM {engineCount === 1 ? "Engine" : "Engines"}
+              {engineCount} AI {engineCount === 1 ? "provider" : "providers"}
             </span>
           </CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-4 pt-2">
+          {/* Plain-English Summary */}
+          <div className="rounded-lg border border-border/60 bg-secondary/30 p-3.5 text-sm">
+            {totalChecks > 0 ? (
+              <p className="text-foreground leading-relaxed">
+                AI mentioned <strong className="text-primary">{mentions} time{mentions !== 1 ? "s" : ""}</strong> across{" "}
+                <strong>{validChecks} of {totalChecks}</strong> completed search checks.
+                {mentionRatePercent > 0 && (
+                  <span className="text-muted-foreground">
+                    {" "}That&apos;s a <strong className="text-foreground">{mentionRatePercent}%</strong> mention rate.
+                  </span>
+                )}
+                {errors > 0 && (
+                  <span className="text-amber-300/80">
+                    {" "}{errors} check{errors !== 1 ? "s" : ""} encountered errors and were excluded.
+                  </span>
+                )}
+              </p>
+            ) : (
+              <p className="text-muted-foreground">
+                Run a scan to see how often AI recommends your brand across customer searches.
+              </p>
+            )}
+          </div>
+
           {/* Metric Cards Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-1">
-              <span className="text-[11px] font-medium text-muted-foreground uppercase">Scan Coverage</span>
+              <span className="text-[11px] font-medium text-muted-foreground uppercase">Searches completed</span>
               <div className="text-xl font-bold text-foreground">
-                {totalChecks > 0 ? `${Math.round((validChecks / totalChecks) * 100)}%` : "0%"}
-                <span className="text-xs font-normal text-muted-foreground ml-1.5">({validChecks}/{totalChecks})</span>
+                {validChecks}
+                <span className="text-xs font-normal text-muted-foreground ml-1.5">of {totalChecks}</span>
               </div>
             </div>
 
             <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-1">
-              <span className="text-[11px] font-medium text-muted-foreground uppercase">AI Mentions</span>
+              <span className="text-[11px] font-medium text-muted-foreground uppercase">Times mentioned</span>
               <div className="text-xl font-bold text-foreground">{mentions}</div>
             </div>
 
             <div className="rounded-lg border border-border bg-secondary/30 p-3 space-y-1">
-              <span className="text-[11px] font-medium text-muted-foreground uppercase">Mention Rate</span>
+              <span className="text-[11px] font-medium text-muted-foreground uppercase">Mention rate</span>
               <div className="text-xl font-bold text-emerald-500">
                 {validChecks > 0 ? `${mentionRatePercent}%` : "—"}
-                <span className="text-[10px] font-normal text-muted-foreground ml-1">({mentions}/{validChecks})</span>
               </div>
             </div>
 
@@ -80,10 +103,10 @@ export function MentionsOverview({ summary, latestScan }: MentionsOverviewProps)
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-medium text-muted-foreground uppercase">Failed Checks</span>
+                <span className="text-[11px] font-medium text-muted-foreground uppercase">Errors</span>
                 {errors > 0 && (
                   <span className="text-[10px] font-medium text-rose-400 group-hover:underline flex items-center">
-                    Inspect <ChevronRight className="h-3 w-3 ml-0.5" />
+                    View <ChevronRight className="h-3 w-3 ml-0.5" />
                   </span>
                 )}
               </div>
@@ -93,35 +116,37 @@ export function MentionsOverview({ summary, latestScan }: MentionsOverviewProps)
             </div>
           </div>
 
-          {/* Failed Check Warning Alert */}
+          {/* Health alert with retry */}
           {errors > 0 && (
             <div className="flex items-start justify-between gap-2.5 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200" role="alert">
               <div className="flex items-start gap-2.5">
                 <AlertCircle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-semibold text-amber-300">
-                    {errors} {errors === 1 ? "check" : "checks"} encountered errors
+                    {validChecks} of {totalChecks} checks completed successfully — {errors} encountered errors
                   </span>
                   <p className="mt-0.5 text-amber-200/90 leading-normal">
-                    Failed checks were excluded from denominator math and score factors rather than treated as non-mentions.
+                    Errors are excluded from your visibility score. You can retry failed checks or review what caused them.
                   </p>
                 </div>
               </div>
-              <Button
-                variant="outline"
-                size="xs"
-                onClick={() => setModalOpen(true)}
-                className="shrink-0 border-amber-500/40 text-amber-300 hover:bg-amber-500/20 text-xs h-7 gap-1"
-              >
-                <Info className="h-3 w-3" />
-                View Errors
-              </Button>
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={() => setModalOpen(true)}
+                  className="border-amber-500/40 text-amber-300 hover:bg-amber-500/20 text-xs h-7 gap-1"
+                >
+                  <Info className="h-3 w-3" />
+                  View errors
+                </Button>
+              </div>
             </div>
           )}
 
-          {/* Provider List */}
+          {/* AI Provider List */}
           <div className="pt-1 border-t border-border/60">
-            <span className="text-xs font-medium text-muted-foreground mb-2 block">Monitored Providers:</span>
+            <span className="text-xs font-medium text-muted-foreground mb-2 block">AI providers monitored:</span>
             <div className="flex flex-wrap items-center gap-2">
               {providers.map((p) => (
                 <div

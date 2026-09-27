@@ -86,7 +86,7 @@ Hope this helps!`;
       expect(result.data.sentiment).toBeNull();
       expect(result.data.reasoning).toBeNull();
       expect(result.data.competitors).toEqual([
-        { name: "Vivobarefoot", position: 1, sentiment: "POSITIVE" },
+        { name: "VivoBarefoot", position: 1, sentiment: "POSITIVE" },
       ]);
     }
   });

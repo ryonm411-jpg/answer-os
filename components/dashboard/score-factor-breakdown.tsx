@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Info } from "lucide-react";
+import { Info, ChevronDown, ChevronUp } from "lucide-react";
 import type { VisibilityFactors } from "@/lib/scoring/calculator";
 
 interface ScoreFactorBreakdownProps {
@@ -10,50 +11,51 @@ interface ScoreFactorBreakdownProps {
 }
 
 export function ScoreFactorBreakdown({ factors }: ScoreFactorBreakdownProps) {
+  const [showCalculation, setShowCalculation] = useState(false);
+
   const factorItems = [
     {
-      name: "Mention Rate",
+      name: "Mention rate",
       weight: "30%",
       value: factors ? Math.round(factors.mentionRate * 100) : 0,
       display: factors ? `${Math.round(factors.mentionRate * 100)}%` : "N/A",
-      description: "Percentage of valid AI prompt checks where your product was explicitly mentioned.",
+      description: "How often AI mentions your brand across the searches we tested.",
     },
     {
-      name: "Average Rank",
+      name: "Average position",
       weight: "25%",
       value: factors ? Math.round(factors.averageRank * 100) : 0,
       display: factors ? `${Math.round(factors.averageRank * 100)}%` : "N/A",
-      description: "Visibility score derived from listing position rank. Earlier positions score higher.",
+      description: "Where your brand appears when it is recommended. Earlier positions score higher.",
     },
     {
-      name: "Sentiment Tone",
+      name: "Sentiment",
       weight: "20%",
       value: factors ? Math.round(factors.sentiment * 100) : 0,
       display: factors ? `${Math.round(factors.sentiment * 100)}%` : "N/A",
-      description: "Tone score calculated from positive, neutral, and negative model recommendations.",
+      description: "How positively or negatively AI describes your brand in its answers.",
     },
     {
-      name: "Competitor Share",
+      name: "Competitive visibility",
       weight: "15%",
       value: factors ? Math.round(factors.competitorShare * 100) : 0,
       display: factors ? `${Math.round(factors.competitorShare * 100)}%` : "N/A",
-      description: "Your mention share relative to competitor mentions detected across valid checks.",
+      description: "How often competing brands appear in the same searches as your brand.",
     },
     {
-      name: "Source Authority (Neutral MVP Baseline)",
+      name: "Source quality",
       weight: "10%",
       value: factors ? Math.round(factors.sourceAuthority * 100) : 50,
-      display: "Neutral (50%)",
-      description: "Constant neutral 50% in MVP while citation source extraction is in active development.",
+      display: factors ? `${Math.round(factors.sourceAuthority * 100)}%` : "N/A",
+      description: "How authoritative the sources cited by AI are when recommending your brand.",
     },
   ];
 
   return (
     <Card className="border-border bg-card/60 backdrop-blur-sm flex flex-col justify-between">
       <CardHeader className="pb-2">
-        <CardTitle className="text-base font-semibold text-foreground flex items-center justify-between">
-          <span>Score Factor Breakdown</span>
-          <span className="text-xs font-normal text-muted-foreground">5 Normalized Factors</span>
+        <CardTitle className="text-base font-semibold text-foreground">
+          How your visibility is measured
         </CardTitle>
       </CardHeader>
 
@@ -63,7 +65,6 @@ export function ScoreFactorBreakdown({ factors }: ScoreFactorBreakdownProps) {
             <div className="flex items-center justify-between text-xs">
               <span className="font-medium text-foreground flex items-center gap-1.5">
                 {factor.name}
-                <span className="text-[10px] text-muted-foreground font-normal">({factor.weight})</span>
                 <Tooltip>
                   <TooltipTrigger aria-label={`${factor.name} info`} className="text-muted-foreground hover:text-foreground">
                     <Info className="h-3 w-3" />
@@ -84,6 +85,24 @@ export function ScoreFactorBreakdown({ factors }: ScoreFactorBreakdownProps) {
             </div>
           </div>
         ))}
+
+        {/* How scoring works — expandable */}
+        <div className="pt-2 border-t border-border/40">
+          <button
+            type="button"
+            onClick={() => setShowCalculation(!showCalculation)}
+            className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+          >
+            <span>How is this calculated?</span>
+            {showCalculation ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+          </button>
+          {showCalculation && (
+            <div className="mt-2 text-[11px] text-muted-foreground leading-relaxed space-y-1 bg-secondary/30 rounded-md p-2.5">
+              <p>Each factor is weighted: mention rate (30%), average position (25%), sentiment (20%), competitive visibility (15%), and source quality (10%).</p>
+              <p className="mt-1">Source quality is currently measured using a neutral baseline in this version of AnswerOS. It will be replaced with actual citation authority data in a future update.</p>
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

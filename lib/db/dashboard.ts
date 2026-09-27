@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { getCompanyScoreForScan } from "./scoring";
 import { calculateVisibilityScore, type ScoredScan, type ScoreResultRow } from "@/lib/scoring/calculator";
+import { normalizeEntityName } from "@/lib/utils/entity";
 
 export interface PromptPerformanceItem {
   promptId: string;
@@ -321,7 +322,12 @@ export async function getCompetitorMentionsForScan(scanId: string | null): Promi
     if (Array.isArray(r.competitorsMentioned)) {
       for (const item of r.competitorsMentioned as { name?: unknown }[]) {
         if (typeof item?.name === "string" && item.name.trim().length > 0) {
-          const cName = item.name.trim();
+          const rawName = item.name.trim();
+          const cName = normalizeEntityName(rawName);
+          const lower = cName.toLowerCase();
+          if (!cName || lower === "otherco" || lower === "other company" || lower === "unknown competitor" || lower === "other" || lower === "n/a") {
+            continue;
+          }
           countMap.set(cName, (countMap.get(cName) || 0) + 1);
           totalMentions += 1;
         }
@@ -635,7 +641,12 @@ export async function getCompetitorLeaderboard(scanId: string | null): Promise<C
     if (Array.isArray(r.competitorsMentioned)) {
       for (const item of r.competitorsMentioned as { name?: unknown; position?: unknown; sentiment?: unknown }[]) {
         if (typeof item?.name === "string" && item.name.trim().length > 0) {
-          const cName = item.name.trim();
+          const rawName = item.name.trim();
+          const cName = normalizeEntityName(rawName);
+          const lower = cName.toLowerCase();
+          if (!cName || lower === "otherco" || lower === "other company" || lower === "unknown competitor" || lower === "other" || lower === "n/a") {
+            continue;
+          }
           let entry = compStats.get(cName);
           if (!entry) {
             entry = { name: cName, mentions: 0, sentiments: [], positions: [] };

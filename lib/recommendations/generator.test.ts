@@ -69,7 +69,7 @@ describe("lib/recommendations/generator", () => {
 
     const faqRec = recs.find((r) => r.category === "FAQ & Schema");
     expect(faqRec).toBeDefined();
-    expect(faqRec?.title).toContain("Durability & Reviews FAQ");
+    expect(faqRec?.title).toContain("Durability & Reviews questions");
     expect(faqRec?.priority).toBe(1);
   });
 

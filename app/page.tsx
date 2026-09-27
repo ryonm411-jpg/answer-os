@@ -4,32 +4,37 @@ import { redirect } from "next/navigation";
 import { LandingNavbar } from "@/components/landing/landing-navbar";
 import { LandingHero } from "@/components/landing/landing-hero";
 import { ScanPreviewShowcase } from "@/components/landing/scan-preview-showcase";
+import { WhatYouDiscover } from "@/components/landing/what-you-discover";
 import { HowItWorks } from "@/components/landing/how-it-works";
+import { RetentionTracking } from "@/components/landing/retention-tracking";
+import { UseCases } from "@/components/landing/use-cases";
+import { RecommendationsShowcase } from "@/components/landing/recommendations-showcase";
 import { ScoreExplainer } from "@/components/landing/score-explainer";
-import { FeatureGrid } from "@/components/landing/feature-grid";
-import { WhoItsFor } from "@/components/landing/who-its-for";
 import { PricingTeaser } from "@/components/landing/pricing-teaser";
 import { LandingFaq } from "@/components/landing/faq";
+import { FinalCta } from "@/components/landing/final-cta";
 import { LandingFooter } from "@/components/landing/landing-footer";
 import { LandingTracker } from "@/components/landing/landing-tracker";
 
 export const metadata: Metadata = {
-  title: "AnswerOS — Become the answer AI search engines give",
+  title: "AnswerOS — See how AI search engines recommend your brand",
   description:
-    "AnswerOS helps B2B SaaS companies track and optimize how often ChatGPT, Claude, Gemini, and Groq recommend their software to prospective buyers.",
+    "AnswerOS shows where your brand appears in ChatGPT, Claude, Gemini, and other AI search experiences—including your ranking, competitors, cited sources, and what to improve.",
   keywords: [
-    "AI search optimization",
+    "AI search visibility",
     "AEO",
     "GEO",
-    "ChatGPT SEO",
+    "AI brand monitoring",
+    "ChatGPT recommendations",
     "Claude visibility",
-    "B2B SaaS marketing",
+    "Gemini search",
     "AI visibility score",
+    "Generative engine optimization",
   ],
   openGraph: {
-    title: "AnswerOS — Become the answer AI search engines give",
+    title: "AnswerOS — See how AI search engines recommend your brand",
     description:
-      "Scan buyer prompts across 7 AI engines, measure brand mentions & sentiment, and get prioritized recommendations to win AI search recommendations.",
+      "Scan buyer queries across 6 AI providers, measure brand mentions, sentiment, and competitor presence, and get prioritized recommendations to improve your AI visibility.",
     type: "website",
   },
 };
@@ -48,12 +53,15 @@ export default async function HomePage() {
       <main className="flex-1">
         <LandingHero />
         <ScanPreviewShowcase />
+        <WhatYouDiscover />
         <HowItWorks />
+        <RetentionTracking />
+        <UseCases />
+        <RecommendationsShowcase />
         <ScoreExplainer />
-        <FeatureGrid />
-        <WhoItsFor />
         <PricingTeaser />
         <LandingFaq />
+        <FinalCta />
       </main>
       <LandingFooter />
     </div>

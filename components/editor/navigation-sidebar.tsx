@@ -28,9 +28,9 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { name: "Dashboard", icon: LayoutDashboard, href: "/editor" },
-  { name: "Prompts", icon: HelpCircle, href: "/prompts" },
-  { name: "Scan History", icon: History, href: "/scans" },
+  { name: "Overview", icon: LayoutDashboard, href: "/editor" },
+  { name: "AI Searches", icon: HelpCircle, href: "/prompts" },
+  { name: "Reports", icon: History, href: "/scans" },
   { name: "Billing", icon: CreditCard, href: "/billing" },
   { name: "Settings", icon: Settings, href: "/settings" },
 ];

@@ -77,7 +77,7 @@ const OTHER_DOMAINS = new Set([
   "yahoo.com",
 ]);
 
-/** Normalize raw domain/URL string to clean root domain (e.g. "https://www.reddit.com/r/..." -> "reddit.com") */
+/** Normalize raw domain/URL string to clean canonical root domain */
 export function normalizeDomain(input: string): string {
   if (!input) return "";
   let clean = input.trim().toLowerCase();
@@ -92,6 +92,12 @@ export function normalizeDomain(input: string): string {
   if (clean.startsWith("www.")) {
     clean = clean.slice(4);
   }
+
+  // Strip common image/asset prefixes: "image.", "images.", "img.", "cdn.", "assets."
+  clean = clean.replace(/^(?:images?|img|cdn|assets|media|static)\./i, "");
+
+  // Fix concatenated prefix hallucinations e.g. "imageamd.com" -> "amd.com", "imagenvidia.com" -> "nvidia.com"
+  clean = clean.replace(/^image([a-z0-9-]+\.(?:com|org|net|co|io|app|tech|dev))$/i, "$1");
 
   return clean;
 }

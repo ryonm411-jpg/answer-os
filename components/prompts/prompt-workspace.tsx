@@ -195,17 +195,17 @@ export function PromptWorkspace({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">
-            Prompt Management & Opportunity Ranking
+            AI Search Questions
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Review and prioritize buyer questions AnswerOS tests for{" "}
-            <strong className="text-foreground">{companyName}</strong> before scanning.
+            These are the questions AnswerOS uses to see how AI recommends{" "}
+            <strong className="text-foreground">{companyName}</strong>.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="text-sm px-3 py-1">
-            {prompts.length} Active Prompts
+            {prompts.length} Search Questions
           </Badge>
           <Button
             onClick={() => {
@@ -216,7 +216,7 @@ export function PromptWorkspace({
             className="gap-2"
           >
             <Plus className="h-4 w-4" />
-            <span>Add Custom Prompt</span>
+            <span>Add Question</span>
           </Button>
         </div>
       </div>
@@ -249,7 +249,7 @@ export function PromptWorkspace({
         <div className="relative flex-1">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search prompts or categories..."
+            placeholder="Search questions..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 h-9 text-xs"
@@ -259,13 +259,13 @@ export function PromptWorkspace({
         <div className="flex items-center gap-2 flex-wrap">
           {/* Prompt Type Filter */}
           <Select value={selectedType} onValueChange={setSelectedType}>
-            <SelectTrigger className="h-9 w-[130px] text-xs">
-              <SelectValue placeholder="All Types" />
+            <SelectTrigger className="h-9 w-[150px] text-xs">
+              <SelectValue placeholder="All searches" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All Types</SelectItem>
-              <SelectItem value="BRANDED">Branded</SelectItem>
-              <SelectItem value="UNBRANDED">Organic</SelectItem>
+              <SelectItem value="ALL">All searches</SelectItem>
+              <SelectItem value="BRANDED">Brand searches</SelectItem>
+              <SelectItem value="UNBRANDED">General searches</SelectItem>
             </SelectContent>
           </Select>
 
@@ -273,10 +273,10 @@ export function PromptWorkspace({
           <Select value={selectedIntent} onValueChange={setSelectedIntent}>
             <SelectTrigger className="h-9 w-[150px] text-xs">
               <Filter className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-              <SelectValue placeholder="All Intents" />
+              <SelectValue placeholder="All topics" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All Intents</SelectItem>
+              <SelectItem value="ALL">All topics</SelectItem>
               {PROMPT_INTENTS.map((i) => (
                 <SelectItem key={i} value={i}>
                   {INTENT_LABELS[i]}
@@ -288,12 +288,12 @@ export function PromptWorkspace({
           {/* Source Filter */}
           <Select value={selectedSource} onValueChange={setSelectedSource}>
             <SelectTrigger className="h-9 w-[140px] text-xs">
-              <SelectValue placeholder="All Sources" />
+              <SelectValue placeholder="All sources" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ALL">All Sources</SelectItem>
+              <SelectItem value="ALL">All sources</SelectItem>
               <SelectItem value="CURATED">Curated</SelectItem>
-              <SelectItem value="AI_SUGGESTED">AI Suggested</SelectItem>
+              <SelectItem value="AI_SUGGESTED">AI generated</SelectItem>
               <SelectItem value="USER_CUSTOM">Custom</SelectItem>
             </SelectContent>
           </Select>
@@ -302,11 +302,11 @@ export function PromptWorkspace({
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as "OPPORTUNITY" | "RELEVANCE" | "TEXT")}>
             <SelectTrigger className="h-9 w-[170px] text-xs">
               <ArrowUpDown className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-              <SelectValue placeholder="Sort Order" />
+              <SelectValue placeholder="Sort order" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="OPPORTUNITY">Opportunity Score</SelectItem>
-              <SelectItem value="RELEVANCE">Business Relevance</SelectItem>
+              <SelectItem value="OPPORTUNITY">Highest opportunity</SelectItem>
+              <SelectItem value="RELEVANCE">Most relevant</SelectItem>
               <SelectItem value="TEXT">Alphabetical</SelectItem>
             </SelectContent>
           </Select>
