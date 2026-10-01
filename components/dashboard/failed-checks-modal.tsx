@@ -82,7 +82,7 @@ export function FailedChecksModal({
       <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col gap-0 p-0 border-border bg-card overflow-hidden">
         <DialogHeader className="p-5 pb-4 border-b border-border/80 bg-secondary/20">
           <div className="flex items-center gap-2.5">
-            <div className="rounded-lg bg-rose-500/10 p-2 text-rose-500 border border-rose-500/20">
+            <div className="rounded-lg bg-secondary p-2 text-muted-foreground border border-border">
               <AlertCircle className="h-5 w-5" />
             </div>
             <div>
@@ -154,8 +154,8 @@ export function FailedChecksModal({
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge
-                          variant="destructive"
-                          className="font-mono text-[10px] px-2 py-0.5 gap-1 bg-rose-500/15 text-rose-400 border border-rose-500/30"
+                          variant="outline"
+                          className="font-mono text-[10px] px-2 py-0.5 gap-1 text-muted-foreground border-border bg-secondary/40"
                         >
                           <Bot className="h-3 w-3" />
                           {item.provider}
@@ -178,8 +178,8 @@ export function FailedChecksModal({
                       </span>
                     </div>
 
-                    <div className="rounded bg-rose-950/30 border border-rose-500/20 p-2.5 font-mono text-[11px] text-rose-300 break-words leading-relaxed">
-                      <div className="font-semibold text-rose-400 mb-0.5 flex items-center gap-1.5">
+                    <div className="rounded bg-muted/40 border border-border/80 p-2.5 font-mono text-[11px] text-muted-foreground break-words leading-relaxed">
+                      <div className="font-medium text-foreground/80 mb-0.5 flex items-center gap-1.5">
                         <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                         <span>Error Details:</span>
                       </div>

@@ -6,7 +6,7 @@ export const DEFAULT_MODELS: Record<AIProviderName, string> = {
   gemini: "gemini-3.6-flash",
   perplexity: "sonar",
   groq: "openai/gpt-oss-20b",
-  nvidia: "deepseek-ai/deepseek-v4.1-flash",
+  nvidia: "meta/llama-3.2-11b-vision-instruct",
   openrouter: "openrouter/auto",
 };
 

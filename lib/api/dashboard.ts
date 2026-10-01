@@ -34,12 +34,18 @@ export async function getDashboardTrend(
     headers: { "Content-Type": "application/json" },
   });
 
+  const text = await res.text();
+  let body: GetTrendResponse = {};
+  try {
+    body = JSON.parse(text);
+  } catch {
+    // Non-JSON response (e.g., HTML error page)
+  }
+
   if (!res.ok) {
-    const body: GetTrendResponse = await res.json().catch(() => ({}));
     throw new Error(body.error?.message || "Failed to fetch trend data");
   }
 
-  const body: GetTrendResponse = await res.json();
   return body.data?.trend || [];
 }
 
@@ -64,12 +70,18 @@ export async function getDashboardSources(
     headers: { "Content-Type": "application/json" },
   });
 
+  const text = await res.text();
+  let body: GetSourcesResponse = {};
+  try {
+    body = JSON.parse(text);
+  } catch {
+    // Non-JSON response (e.g., HTML error page)
+  }
+
   if (!res.ok) {
-    const body: GetSourcesResponse = await res.json().catch(() => ({}));
     throw new Error(body.error?.message || "Failed to fetch sources data");
   }
 
-  const body: GetSourcesResponse = await res.json();
   return (
     body.data || {
       totalSourcesCount: 0,

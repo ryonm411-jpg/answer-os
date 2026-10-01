@@ -39,9 +39,14 @@ async function askWithRetry(provider: AIProvider, prompt: string): Promise<AIRes
   const profile = getProviderProfile(provider.name);
   let lastError: unknown;
   // Groq free tier: allow up to 2 attempts so a transient 429 can recover after backoff.
+  // NVIDIA free tier: allow up to 2 attempts so transient cold-start timeouts can recover.
   // Other free-tier providers still fail fast (maxAttempts=1).
   const maxAttempts =
-    provider.name === "groq" ? 2 : profile.tier === "free" ? 1 : profile.maxRetries;
+    provider.name === "groq" || provider.name === "nvidia"
+      ? 2
+      : profile.tier === "free"
+      ? 1
+      : profile.maxRetries;
   // Groq free tier: 900 tokens/request → ~8 safe requests per minute under 8k TPM.
   const maxTokens = provider.name === "groq" ? 900 : SCAN_MAX_TOKENS;
 

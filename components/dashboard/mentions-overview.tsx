@@ -60,7 +60,7 @@ export function MentionsOverview({ summary, latestScan }: MentionsOverviewProps)
                   </span>
                 )}
                 {errors > 0 && (
-                  <span className="text-amber-300/80">
+                  <span className="text-muted-foreground">
                     {" "}{errors} check{errors !== 1 ? "s" : ""} encountered errors and were excluded.
                   </span>
                 )}
@@ -98,19 +98,19 @@ export function MentionsOverview({ summary, latestScan }: MentionsOverviewProps)
               onClick={() => errors > 0 && setModalOpen(true)}
               className={`rounded-lg border bg-secondary/30 p-3 space-y-1 transition-all ${
                 errors > 0
-                  ? "border-rose-500/40 hover:border-rose-500/80 hover:bg-rose-500/5 cursor-pointer group"
+                  ? "border-border hover:border-border/80 hover:bg-secondary/50 cursor-pointer group"
                   : "border-border"
               }`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-[11px] font-medium text-muted-foreground uppercase">Errors</span>
                 {errors > 0 && (
-                  <span className="text-[10px] font-medium text-rose-400 group-hover:underline flex items-center">
+                  <span className="text-[10px] font-medium text-muted-foreground group-hover:text-foreground group-hover:underline flex items-center">
                     View <ChevronRight className="h-3 w-3 ml-0.5" />
                   </span>
                 )}
               </div>
-              <div className={`text-xl font-bold ${errors > 0 ? "text-rose-500" : "text-foreground"}`}>
+              <div className="text-xl font-bold text-foreground">
                 {errors}
               </div>
             </div>
@@ -118,14 +118,14 @@ export function MentionsOverview({ summary, latestScan }: MentionsOverviewProps)
 
           {/* Health alert with retry */}
           {errors > 0 && (
-            <div className="flex items-start justify-between gap-2.5 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200" role="alert">
+            <div className="flex items-start justify-between gap-2.5 rounded-lg border border-border/80 bg-secondary/20 p-3 text-xs text-muted-foreground" role="alert">
               <div className="flex items-start gap-2.5">
-                <AlertCircle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                <AlertCircle className="h-4 w-4 text-muted-foreground/80 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-semibold text-amber-300">
+                  <span className="font-medium text-foreground/90">
                     {validChecks} of {totalChecks} checks completed successfully — {errors} encountered errors
                   </span>
-                  <p className="mt-0.5 text-amber-200/90 leading-normal">
+                  <p className="mt-0.5 text-muted-foreground/80 leading-normal">
                     Errors are excluded from your visibility score. You can retry failed checks or review what caused them.
                   </p>
                 </div>
@@ -135,7 +135,7 @@ export function MentionsOverview({ summary, latestScan }: MentionsOverviewProps)
                   variant="outline"
                   size="xs"
                   onClick={() => setModalOpen(true)}
-                  className="border-amber-500/40 text-amber-300 hover:bg-amber-500/20 text-xs h-7 gap-1"
+                  className="border-border/80 text-muted-foreground hover:text-foreground hover:bg-secondary text-xs h-7 gap-1"
                 >
                   <Info className="h-3 w-3" />
                   View errors

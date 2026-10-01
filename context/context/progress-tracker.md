@@ -430,7 +430,11 @@ Update this file after every meaningful implementation change.
     2. Built REST API endpoint `GET /api/scans/[id]` in `app/api/scans/[id]/route.ts` returning comprehensive scan execution telemetry, per-model health breakdown, prompt groupings (Organic vs Branded counts), and individual check outcomes (mention, position, sentiment, reasoning, competitors, citations, errors).
     3. Built Interactive Inspection Dialog (`components/dashboard/scan-details-modal.tsx`) with search, multi-engine filters, prompt-type filters (Organic vs Branded), outcome toggles (Mentions, Clean, Errors), and expandable per-model AI reasoning/citations accordion.
     4. Updated Scan History page (`app/(editor)/scans/page.tsx`) to make every scan record clickable with a dedicated "Details" inspection button.
-    5. Verified 136 unit tests passing across 25 test files (`npm test`), linting clean (`npm run lint`), TypeScript check clean (`npx tsc --noEmit`), and production build succeeded (`npm run build`).
+    5. Verified 136 unit tests passing across 25 test files (`npm test`), linting clean (`npm run lint`), TypeScript check clean.
+- Blended Errors Section UI Refinement (2026-09-30):
+    1. Softened error section styling in `components/dashboard/mentions-overview.tsx` — removed bold yellow text from summary line (`text-muted-foreground`), replaced red glow/border and red text on the ERRORS metric card with neutral standard metric styling (`border-border`, `text-foreground font-bold`), and replaced bright amber health alert banner with subtle blended secondary styling (`border-border/80`, `bg-secondary/20`, `text-muted-foreground`).
+    2. Updated `components/dashboard/failed-checks-modal.tsx` to use neutral background accents, outline badges, and standard dark background containers for error logs to keep inspection modals consistent.
+    3. Verified TypeScript check clean (`npx tsc --noEmit`).
 - Fixed Scan Execution Desynchronization, Real-Time Persistence & Retry Bounds (2026-09-06):
     1. Implemented real-time incremental result persistence in `lib/jobs/scan.ts` via `createScanResults(scanId, batchResults)` after every prompt/concurrency batch completes, ensuring scan results are saved to PostgreSQL immediately and visible on the AnswerOS web app UI without waiting for all 300+ checks to finish.
     2. Added `retry: { maxAttempts: 1 }` to the `scan-company` task definition in `lib/jobs/scan.ts` and updated outer catch blocks to update PostgreSQL `scan.status = "FAILED"` cleanly without re-throwing unhandled exceptions, eliminating 18-minute background retry storms in Trigger.dev while the web UI reported "Failed".
@@ -563,3 +567,10 @@ Update this file after every meaningful implementation change.
     3. Integrated `LiveDomainChecker` into `LandingHero` and `ScanPreviewShowcase` into `app/page.tsx`.
     4. Enhanced `OnboardingForm` (`components/onboarding/onboarding-form.tsx`) to automatically prefill the user's domain from `sessionStorage` or URL parameters upon signup.
     5. Verified: 144 unit tests passing across 25 test files (`npm test`), TypeScript check clean (`npx tsc --noEmit`), and production build succeeded (`npm run build`).
+- Optimized NVIDIA NIM Retry Budget in Scanner Pipeline (2026-09-28):
+    1. Updated `askWithRetry` in `lib/jobs/scan.ts` to allow NVIDIA free-tier provider up to 2 attempts (`maxAttempts = 2`) alongside Groq, enabling transient cold-start timeouts and API queue delays to recover automatically on retry instead of failing immediately.
+    2. Verified test suite with 147 unit tests passing cleanly across 25 test files (`npx vitest run`).
+- Fixed Dashboard API Error Handling & Stream Re-read SyntaxErrors (2026-09-28):
+    1. Added `try / catch` error handling block around `getMultiBrandScoreHistory` in `app/api/dashboard/trend/route.ts` to ensure API server errors consistently return structured JSON (`{ error: { message: "..." } }`) instead of unhandled HTML 500 pages.
+    2. Refactored `getDashboardTrend` and `getDashboardSources` in `lib/api/dashboard.ts` to consume `res.text()` and `JSON.parse` safely within a `try / catch`, preventing double-read `SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON` console errors when non-200 or HTML error responses occur.
+    3. Verified test suite with 147 unit tests passing across 25 test files (`npx vitest run`).

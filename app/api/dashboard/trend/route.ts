@@ -33,15 +33,23 @@ export async function GET(req: Request) {
   const provider = providerParam || "all";
   const promptType = promptTypeParam || "all";
 
-  const trend = await getMultiBrandScoreHistory(company.id, {
-    dateRangeDays: days,
-    provider,
-    promptType,
-  });
+  try {
+    const trend = await getMultiBrandScoreHistory(company.id, {
+      dateRangeDays: days,
+      provider,
+      promptType,
+    });
 
-  return NextResponse.json({
-    data: {
-      trend,
-    },
-  });
+    return NextResponse.json({
+      data: {
+        trend,
+      },
+    });
+  } catch (error) {
+    console.error("[GET /api/dashboard/trend] Error:", error);
+    return NextResponse.json(
+      { error: { message: "Failed to load trend data" } },
+      { status: 500 }
+    );
+  }
 }

@@ -85,7 +85,7 @@ export const PROVIDER_PROFILES: Record<AIProviderName, ProviderProfile> = {
     maxConcurrency: 1,
     requestsPerMinute: 30,
     tokensPerMinute: 20000,
-    requestTimeoutMs: 30_000,
+    requestTimeoutMs: 60_000,
     maxRetries: 2,
   },
   openrouter: {

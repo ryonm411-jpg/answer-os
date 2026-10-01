@@ -25,7 +25,7 @@ export const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
     description: "Ultra-fast inference (Llama 3.3 70B). Best for instant preview scans.",
     speedBadge: "Ultra Fast",
     promptLengthNote: "Requires Short Prompts",
-    restrictionNote: "Capped at 1,000 chars per prompt (shared API key & 8k TPM cap)",
+    restrictionNote: "Max 1 prompt at a time (capped at 1,000 chars, shared API key & 8k TPM cap)",
   },
   {
     name: "nvidia",

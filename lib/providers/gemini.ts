@@ -30,7 +30,7 @@ export class GeminiProvider implements AIProvider {
         prompt,
         maxOutputTokens: config.maxTokens ?? DEFAULT_MAX_TOKENS,
         temperature: config.temperature ?? DEFAULT_TEMPERATURE,
-        maxRetries: 0,
+        maxRetries: 2,
         abortSignal: AbortSignal.timeout(config.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       });
 
