@@ -24,6 +24,7 @@
     "@sentry/nextjs": "^10.71.0",
     "@trigger.dev/sdk": "4.6.4",
     "@upstash/redis": "^1.38.2",
+    "@vercel/analytics": "^2.0.1",
     "ai": "^7.0.55",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

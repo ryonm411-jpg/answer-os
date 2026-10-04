@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { PostHogIdentify } from "@/lib/analytics/posthog-identify";
 import { ErrorBoundary } from "@sentry/nextjs";
 import { CookieBanner } from "@/components/legal/cookie-banner";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -53,6 +54,7 @@ export default function RootLayout({
             <TooltipProvider>
               {children}
               <CookieBanner />
+              <Analytics />
             </TooltipProvider>
           </body>
         </html>
